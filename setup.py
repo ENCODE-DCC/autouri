@@ -1,0 +1,24 @@
+import setuptools
+import autouri
+
+with open('README.md', 'r') as fh:
+    long_description = fh.read()
+
+setuptools.setup(
+    name='autouri',
+    version=autouri.__version__,
+    python_requires='>3.4.1',
+    author='Jin Lee',
+    author_email='leepc12@gmail.com',
+    description='Automatic conversion/localization for URIs (s3://, gs://, http://, https:// and local path)',
+    long_description='https://github.com/ENCODE-DCC/autouri',
+    long_description_content_type='text/markdown',
+    url='https://github.com/ENCODE-DCC/autouri',
+    packages=setuptools.find_packages(exclude=['docs', 'test']),
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: POSIX :: Linux',
+    ],
+    install_requires=['requests', 'pyopenssl', 'google-cloud-storage', 'boto3']
+)
