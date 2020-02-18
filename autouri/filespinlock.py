@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """FileSpinLock class
 
-Author: Jin Lee (leepc12@gmail.com) at ENCODE-DCC
+Author: Jin Lee (leepc12@gmail.com)
 """
 
 from .autouri import AutoURI, logger

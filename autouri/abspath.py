@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""
+"""AbsPath class
+
 Author: Jin Lee (leepc12@gmail.com)
 """
 
@@ -33,12 +34,14 @@ class AbsPath(AutoURI):
             Maximum number of lock file polling (way more than default).
         FILELOCK_SEC_POLLING_INTERVAL:
             Default polling interval in seconds (way more frequent than default).
+
     """
     MAP_PATH_TO_URL = None
     FILELOCK_MAX_POLLING = 18000
     FILELOCK_SEC_POLLING_INTERVAL = 0.1
+    MD5_CALC_CHUNK_SIZE = 4096
 
-    _LOC_SUFFIX = '.local.'
+    _LOC_SUFFIX = '.local'
     _OS_SEP = os.sep
     _SCHEME = None
 
@@ -60,18 +63,23 @@ class AbsPath(AutoURI):
             max_polling=AbsPath.FILELOCK_MAX_POLLING,
             sec_polling_interval=AbsPath.FILELOCK_SEC_POLLING_INTERVAL)
 
-    def get_metadata(self, make_md5_file=False):
-        """md5 hash is not included since it's expensive.
-        Call AbsPath.get_md5() separately to get md5 hash
+    def get_metadata(self, skip_md5=False, make_md5_file=False):
+        """If md5 file doesn't exists then use hashlib.md5() to calculate md5 hash
         """
         ex = os.path.exists(self._uri)
         mt, sz, md5 = None, None, None
         if ex:
             mt = os.path.getmtime(self._uri)
             sz = os.path.getsize(self._uri)
-            md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
-            if md5 is None:
-                md5 = hashlib.md5(self._uri).hexdigest()
+            if not skip_md5:
+                md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
+                if md5 is None:
+                    # expensive md5 calculation
+                    hash_md5 = hashlib.md5()
+                    with open(self._uri, 'rb') as fp:
+                        for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
+                            hash_md5.update(chunk)
+                    md5 = hash_md5.hexdigest()
         return AutoURIMetadata(
             exists=ex,
             mtime=mt,

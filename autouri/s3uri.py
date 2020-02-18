@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""
+"""S3URI class
+
 Author: Jin Lee (leepc12@gmail.com)
 """
 
@@ -50,7 +51,7 @@ class S3URI(AutoURI):
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
 
-    def get_metadata(self, make_md5_file=False):
+    def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = None, None, None, None
 
         cl = S3URI.get_boto3_client()
@@ -77,7 +78,7 @@ class S3URI(AutoURI):
             utc_t = parse_timestamp(h['last-modified'])
             mt = (utc_t - datetime(1970, 1, 1)).total_seconds()
 
-        if md5 is None:
+        if md5 is None and not skip_md5:
             md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
 
         return AutoURIMetadata(

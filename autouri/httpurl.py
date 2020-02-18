@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""
+"""HTTPURL class
+
 Features:    
     - Wraps Python requests for HTTP URLs.
     - Can convert a bucket URI into a public URL by presigning
@@ -47,26 +48,22 @@ class HTTPURL(AutoURI):
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
 
-    def get_dirname(no_scheme=False):
+    @property
+    def loc_dirname(self):
+        """Dirname of URL is not very meaningful.
+        Therefore, hash string of the whole URL string is used instead for localization.
         """
-        Args:
-            no_scheme:
-                md5-hash the whole URL instead of removing a scheme
-        """
-        dirname = os.path.dirname(self._uri)
-        if no_scheme:
-            dirname = hashlib.md5(self._uri.encode('utf-8')).hexdigest()
-        return dirname
+        return hashlib.md5(self._uri.encode('utf-8')).hexdigest()
 
-    def get_basename():
+    @property
+    def basename(self):
         """Parses a URL to get a basename.
         This class can only work with a URL with an explicit basename
         which can be suffixed with extra parameters starting with ? only.
         """
-        basename = super().get_basename()
-        return basename.split('?', 1)[0]
+        return super().basename.split('?', 1)[0]
 
-    def get_metadata(self, make_md5_file=False):
+    def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = None, None, None, None, None
 
         # get header only (make it lower case)
@@ -89,7 +86,7 @@ class HTTPURL(AutoURI):
             utc_t = parse_timestamp(h['last-modified'])
             mt = (utc_t - datetime(1970, 1, 1)).total_seconds()
 
-        if md5 is None:
+        if md5 is None and not skip_md5:
             md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
 
         return AutoURIMetadata(
@@ -137,30 +134,6 @@ class HTTPURL(AutoURI):
 
     def _cp_from(self, src_uri):
         raise NotImplementedError('Read-only URI class.')
-
-    @staticmethod
-    def get_localized_uri(src_uri):
-        """Unlike localization for other URI types.
-        Localization to URLs can be defined by one of the followings:
-            1) presigning bucket URIs.
-                S3URI, GCSURI -> HTTPURL
-            2) mapping of AbsPath's prefix to URL.
-                AbsPath -> HTTPURL
-        """
-        src_uri = AutoURI(src_uri)
-
-        from .s3uri import S3URI
-        from .gcsuri import GCSURI
-        from .abspath import AbsPath
-
-        if isinstance(src_uri, S3URI) and S3URI.can_presign():
-            return AutoURI(src_uri.get_presigned_url()), False
-        if isinstance(src_uri, GCSURI) and GCSURI.can_presign():
-            return AutoURI(src_uri.get_presigned_url()), False
-        if isinstance(src_uri, AbsPath) and AbsPath.can_map_to_url():
-            return AutoURI(src_uri.get_mapped_url()), False
-
-        raise NotImplementedError('Cannot localize on read-only URI class.')
 
     @classmethod
     def get_http_chunk_size(cls):

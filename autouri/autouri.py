@@ -13,16 +13,17 @@ Features:
         - Keeping the original directory structure.
         - Can recursively localize all files in a CSV/TSV/JSON(value only) file.
 
-Author: Jin Lee (leepc12@gmail.com) at ENCODE-DCC
+Author: Jin Lee (leepc12@gmail.com)
 """
 
+import hashlib
 import json
 import logging
 import os
 import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from .loc import get_loc_uri, loc_recurse
+from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -34,16 +35,13 @@ AutoURIMetadata = namedtuple('AutoURIMetadata', ('exists', 'mtime', 'size', 'md5
 
 def init_autouri(
     md5_file_ext=None,
-    fn_get_loc_uri=None,
-    fn_loc_recurse=None):
+    loc_recurse_ext_and_fnc=None):
     """Helper for initializing AutoURI class constants
     """
     if md5_file_ext is not None:
         AutoURI.MD5_FILE_EXT = md5_file_ext
-    if fn_get_loc_uri is not None:
-        AutoURI.FN_GET_LOC_URI = fn_get_loc_uri
-    if fn_loc_recurse is not None:
-        AutoURI.FN_LOC_RECURSE = fn_loc_recurse
+    if loc_recurse_ext_and_fnc is not None:
+        AutoURI.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
 
 
 class AutoURI(ABC):
@@ -61,13 +59,12 @@ class AutoURI(ABC):
     Class constants:
         MD5_FILE_EXT:
             File extention for md5 (.md5).
-        FN_GET_LOC_URI:
-            Function to make a localized URI.
-        FN_LOC_RECURSE:
-            Function to define recursive behavior of AutoURI's locationzation.
-            (AutoURI.localize())
+        LOC_RECURSE_EXT_AND_FNC:
+            Tuple of tuples of file extension (including dot) and function to recurse in it.
+                e.g. [('.json', recurse_dict), ('.tsv', recurse_tsv), ...]
         LOC_PREFIX:
-            Path prefix for localization.
+            Cache path prefix for localization on this class' storage.
+            This should be None for this base class but must be specified for subclasses.
 
     Protected class constants:
         _OS_SEP:
@@ -78,8 +75,11 @@ class AutoURI(ABC):
             Suffix after recursive localization if file is modified
     """
     MD5_FILE_EXT = '.md5'
-    FN_GET_LOC_URI = get_loc_uri
-    FN_LOC_RECURSE = loc_recurse
+    LOC_RECURSE_EXT_AND_FNC = (
+        ('.json', recurse_json_contents),
+        ('.tsv', recurse_tsv_contents),
+        ('.csv', recurse_csv_contents)
+    )
     LOC_PREFIX = None
 
     _OS_SEP = '/'
@@ -138,10 +138,25 @@ class AutoURI(ABC):
         return dirname
 
     @property
+    def loc_dirname(self):
+        """Dirname to be appended to target cls' LOC_PREFIX after localization.
+    
+        e.g. localization of src_uri on target cls
+            = cls.LOC_PREFIX + src_uri.loc_dirname + src_uri.basename
+        """
+        return self.dirname_wo_scheme
+
+    @property
     def basename(self):
         """Basename.
         """
         return os.path.basename(self._uri)
+
+    @property
+    def basename_wo_ext(self):
+        """Basename without extension.
+        """
+        return os.path.splitext(self.basename)[0]
 
     @property
     def ext(self):
@@ -151,19 +166,19 @@ class AutoURI(ABC):
 
     @property
     def exists(self):
-        return self.get_metadata().exists
+        return self.get_metadata(skip_md5=True).exists
 
     @property
     def mtime(self):
         """Seconds since the epoch.
         """
-        return self.get_metadata().mtime
+        return self.get_metadata(skip_md5=True).mtime
 
     @property
     def size(self): 
         """Size in bytes.
         """
-        return self.get_metadata().size
+        return self.get_metadata(skip_md5=True).size
 
     @property
     def md5(self):
@@ -263,7 +278,7 @@ class AutoURI(ABC):
         return
 
     @abstractmethod
-    def get_metadata(self, make_md5_file=False):
+    def get_metadata(self, skip_md5=False, make_md5_file=False):
         """Metadata of a URI.
         This is more efficient than individually retrieving each item.
         md5 can be None. For example, HTTP URLs.
@@ -356,6 +371,7 @@ class AutoURI(ABC):
     @classmethod
     def get_loc_suffix(cls):
         """File suffix for a MODIFIED file after recursive localization.
+        This is required to distinguish a modified file from an original one.
 
         e.g. s3://temp1/tmp.json -> /scratch/cache_dir/tmp.s3.json
         """
@@ -368,33 +384,8 @@ class AutoURI(ABC):
         return cls.LOC_PREFIX
 
     @classmethod
-    def get_loc_uri(cls, src_uri):
-        """Defines how source URI can be localized on this class' storage.
-
-        Args:
-            src_uri:
-                Source URI
-
-        Returns a tuple of:
-            uri:
-                a localized URI path without actually localizing a file.
-            need_to_copy:
-                whether it's already localized or not
-        """
-        from abspath import AbsPath
-        if AbsPath.get_loc_prefix() is None:
-            raise ValueError('LOC_REFIX must be defined for AbsPath')
-        src_uri = AutoURI(src_uri)
-        localized = AutoURI(__class__.get_path_sep().join([
-            AbsPath._loc_prefix,
-            src_uri.get_dirname(no_scheme=True),
-            src_uri.get_basename()
-        ]))
-        return localized, True
-
-    @classmethod
     def localize(cls, src_uri, make_md5_file=False, recursive=False):
-        """Localize a URI on this URI class ("cls")
+        """Localize a URI on this URI class (cls).
 
         Args:
             src_uri:
@@ -404,67 +395,62 @@ class AutoURI(ABC):
                 assuming that you have write permission on target's directory and
                 its subdirectories recursively.
             recursive:
-                Localize all files recursively in specified file extensions.
-                Any temporary files suffixed with AutoURI subclass names will 
-                always be written on user's LOCAL temporary directory.
+                Localize all files recursively in specified TEXT file extensions.
         Returns:
-            dest_uri:
-                Localized URI on this storage
+            loc_uri:
+                Localized URI STRING (not a AutoURI instance) since it should be used
+                for external function as a callback function.
             modified:
                 Whether localized file is modifed or not.
-                Modified URI is suffixed with this storage type (e.g. .s3.)
-                and should be cached in a local storage first due to 
-                possible lack of write permission
+                Modified URI is suffixed with this cls' storage type (e.g. .s3.).
         """
+        src_uri = AutoURI(src_uri)
+
+        # check if src and dest are on the same storage to skip localization (in most cases)
+        on_different_storage = cls is not src_uri.__class__
+
         modified = False
-        dest_uri = cls.get_loc_uri(src_uri)
-
         if recursive:
-            assert(AutoURI.FN_LOC_RECURSE is not None)
-            AutoURI.FN_LOC_RECURSE(src_uri, cls)
-            # def recurse_dict(d, uri_type, d_parent=None, d_parent_key=None,
-            #                  lst=None, lst_idx=None, modified=False):
-            #     if isinstance(d, dict):
-            #         for k, v in d.items():
-            #             modified |= recurse_dict(v, uri_type, d_parent=d,
-            #                                     d_parent_key=k, modified=modified)
-            #     elif isinstance(d, list):
-            #         for i, v in enumerate(d):
-            #             modified |= recurse_dict(v, uri_type, lst=d,
-            #                                     lst_idx=i, modified=modified)
-            #     elif isinstance(d, str):
-            #         assert(d_parent is not None or lst is not None)
-            #         c = AutoURI(d)
-            #         new_file, modified_ = c.deepcopy(
-            #             uri_type=uri_type, uri_exts=uri_exts)
-            #         modified |= modified_
-            #         if modified_:
-            #             if d_parent is not None:
-            #                 d_parent[d_parent_key] = new_file
-            #             elif lst is not None:
-            #                 lst[lst_idx] = new_file
-            #             else:
-            #                 raise ValueError('Recursion failed.')
-            #         return modified
-            #     return modified
-            # def recurse_loc(uri, cls):
-            raise NotImplementedError
+            # read source contents for recursive localization
+            fnc_loc = lambda x: cls.localize(x, make_md5_file=make_md5_file, recursive=recursive)
+            for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC:
+                if src_uri.ext == ext:
+                    src_contents = src_uri.read()
+                    maybe_modified_contents, modified = fnc_recurse(src_contents, fnc_loc)
+                    break
 
-        if isinstance(src_uri, cls):
-            return
+        if modified:
+            # if modified, always suffix basename (before extension) with target storage cls
+            basename = src_uri.basename_wo_ext + cls.get_loc_suffix() + src_uri.ext
+            if on_different_storage:
+                dirname = src_uri.loc_dirname
+            else:
+                # Use a hashed directory name since sometimes
+                # we don't have write permission on this directory
+                dirname = hashlib.md5(src_uri.uri.encode('utf-8')).hexdigest()
 
-        if need_to_copy:
-            src_uri.cp(dest_uri=dest_uri, make_md5_file=make_md5_file)
-        return dest_uri, modified
+            loc_uri = cls.get_path_sep().join([cls.get_loc_prefix(), dirname, basename])
+            AutoURI(loc_uri).write(maybe_modified_contents)
+
+        elif on_different_storage:            
+            basename = src_uri.basename
+            dirname = src_uri.loc_dirname
+
+            loc_uri = cls.get_path_sep().join([cls.get_loc_prefix(), dirname, basename])
+            src_uri.cp(dest_uri=loc_uri, make_md5_file=make_md5_file)
+        else:
+            # do nothing
+            loc_uri = src_uri.uri
+
+        return loc_uri, modified
 
 
 class NoURI(AutoURI):
+    """Trivial class to represent all non-AutoURI types.
+    This class is useful just to store value in self._uri.
+    """
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
-
-    @property
-    def is_valid(self):
-        return True
 
     def get_metadata(self, make_md5_file=False):
         raise NotImplementedError
