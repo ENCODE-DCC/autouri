@@ -10,25 +10,55 @@ import hashlib
 from filelock import FileLock
 
 
+def init_abspath(
+    loc_prefix=None):
+    """
+    Helper function to initialize AbsPath class constants
+        loc_prefix:
+            Inherited from AutoURI
+    """
+    if loc_prefix is not None:
+        AbsPath.LOC_PREFIX = loc_prefix
+
+
 class AbsPath(AutoURI):
-    # protected constants
+    """
+    Class constants:
+        LOC_PREFIX:
+            Path prefix for localization. Inherited from AutoURI class.
+        MAP_PATH_TO_URL:
+            Dict to replace path prefix with URL prefix.
+            Useful to convert absolute path into URL on a web server.
+        FILELOCK_MAX_POLLING:
+            Maximum number of lock file polling (way more than default).
+        FILELOCK_SEC_POLLING_INTERVAL:
+            Default polling interval in seconds (way more frequent than default).
+    """
+    MAP_PATH_TO_URL = None
+    FILELOCK_MAX_POLLING = 18000
+    FILELOCK_SEC_POLLING_INTERVAL = 0.1
+
     _LOC_SUFFIX = '.local.'
     _OS_SEP = os.sep
     _SCHEME = None
-    # public constants
-    MAP_PATH_TO_URL = None
 
     def __init__(self, uri):
         uri = os.path.expanduser(uri)
         super().__init__(uri, cls=self.__class__)
 
+    @property
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    def get_lock(self):
-        """For AbsPath, use Python package FileLock instead of .lock
+    @property
+    def lock(self):
+        """Locking mechanism uses FileSpinLock class with faster polling
         """
-        return FileLock(self._uri)
+        from autouri.filespinlock import FileSpinLock
+        return FileSpinLock(
+            self,
+            max_polling=AbsPath.FILELOCK_MAX_POLLING,
+            sec_polling_interval=AbsPath.FILELOCK_SEC_POLLING_INTERVAL)
 
     def get_metadata(self, make_md5_file=False):
         """md5 hash is not included since it's expensive.
@@ -69,8 +99,7 @@ class AbsPath(AutoURI):
         return os.remove(self._uri)
 
     def _cp(self, dest_uri):
-        """Copy from AbsPath to 
-            AbsPath            
+        """Copy from AbsPath to other classes
         """
         dest_uri = AutoURI(dest_uri)
 

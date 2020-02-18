@@ -13,40 +13,39 @@ from io import BytesIO
 from botocore.errorfactory import ClientError
 
 
-def init_gcsuri(
+def init_s3uri(
     loc_prefix=None,
     sec_duration_presigned_url=None):
-    """Helper for initializing GCSURI class constants
-
-    Args:
+    """
+    Helper function to initialize S3URI class constants
         loc_prefix:
-            prefix (root path) for localization
-        presign:
-            presign URIs to get presigned URLs
-        sec_duration_presigned_url:
-            duratino for presigned URLs
+            Inherited from AutoURI
     """
     if loc_prefix is not None:
         S3URI.LOC_PREFIX = loc_prefix
     if sec_duration_presigned_url is not None:
         S3URI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
 
-def init_s3uri(
-    loc_prefix=None,
-    sec_duration_presigned_url=4233600):
-    S3URI.LOC_PREFIX = loc_prefix
-    S3URI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
-
 
 class S3URI(AutoURI):
-    # protected constants
-    _LOC_SUFFIX = '.s3'
-    _SCHEME = 's3://'
-    # original
+    """
+    Class constants:
+        LOC_PREFIX:
+            Path prefix for localization. Inherited from AutoURI class.
+        SEC_DURATION_PRESIGNED_URL:
+            Duration for presigned URLs
+
+    Protected class constants:
+        _BOTO3_CLIENT:
+        _CACHED_PRESIGNED_URLS:
+    """
+    SEC_DURATION_PRESIGNED_URL = 4233600
+
     _BOTO3_CLIENT = None
     _CACHED_PRESIGNED_URLS = {}
-    # protected constants
-    SEC_DURATION_PRESIGNED_URL = 4233600
+
+    _LOC_SUFFIX = '.s3'
+    _SCHEME = 's3://'
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)

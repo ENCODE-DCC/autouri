@@ -21,15 +21,9 @@ def init_gcsuri(
     loc_prefix=None,
     private_key_file=None,
     sec_duration_presigned_url=None):
-    """Helper for initializing GCSURI class constants
-
-    Args:
+    """Helper function to initialize GCSURI class constants
         loc_prefix:
-            prefix (root path) for localization
-        private_key_file:
-            private key file in JSON/P12 file format for presigned URLs
-        sec_duration_presigned_url:
-            duratino for presigned URLs
+            Inherited from AutoURI
     """
     if loc_prefix is not None:
         GCSURI.LOC_PREFIX = loc_prefix
@@ -40,15 +34,27 @@ def init_gcsuri(
 
 
 class GCSURI(AutoURI):
-    # protected constants
-    _LOC_SUFFIX = '.gcs'
-    _SCHEME = 'gs://'
-    # original
-    _GCS_CLIENT = None
-    _CACHED_PRESIGNED_URLS = {}
-    # protected constants
+    """
+    Class constants:
+        LOC_PREFIX:
+            Path prefix for localization. Inherited from AutoURI class.
+        PRIVATE_KEY_FILE:
+            Path for private key file used to get presigned URLs
+        SEC_DURATION_PRESIGNED_URL:
+            Duration for presigned URLs
+
+    Protected class constants:
+        _GCS_CLIENT:
+        _CACHED_PRESIGNED_URLS:
+    """
     PRIVATE_KEY_FILE = None
     SEC_DURATION_PRESIGNED_URL = 4233600
+
+    _GCS_CLIENT = None
+    _CACHED_PRESIGNED_URLS = {}
+
+    _LOC_SUFFIX = '.gcs'
+    _SCHEME = 'gs://'
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)

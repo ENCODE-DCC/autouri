@@ -21,15 +21,28 @@ DEFAULT_HTTP_CHUNK_SIZE = 256*1024
 
 def init_httpurl(
     http_chunk_size=None):
+    """
+    Helper function to initialize HTTPURL class constants
+        loc_prefix:
+            Inherited from AutoURI
+    """
     if http_chunk_size is not None:
+        HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
 
 
 class HTTPURL(AutoURI):
-    # protected constants
+    """
+    Class constants:
+        LOC_PREFIX:
+            Path prefix for localization. Inherited from AutoURI class.
+        HTTP_CHUNK_SIZE:
+            Dict to replace path prefix with URL prefix.
+            Useful to convert absolute path into URL on a web server.
+    """
+    HTTP_CHUNK_SIZE = DEFAULT_HTTP_CHUNK_SIZE
+
     _LOC_SUFFIX = '.url'
     _SCHEME = ('http://', 'https://')
-    # public constants
-    HTTP_CHUNK_SIZE = DEFAULT_HTTP_CHUNK_SIZE
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)

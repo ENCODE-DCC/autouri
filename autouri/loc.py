@@ -6,34 +6,9 @@ Author: Jin Lee (leepc12@gmail.com) at ENCODE-DCC
 import os
 import json
 
-
-def init_loc():
-    pass
-
-def get_loc_uri(src_uri, force_loc=False):
-    """Defines how source URI can be localized on this class' storage.
-    Args:
-        src_uri:
-            Source URI
-        force_loc:
-            Force localization on a cache directory even for the same URI type
-
-    Returns a tuple of:
-        uri:
-            a localized URI path without actually localizing a file.
-        need_to_copy:
-            whether it's already localized or not
-    """
-    if AbsPath.LOC_PREFIX is None:
-        raise ValueError('loc_prefix must be defined for AbsPath')
-    src_uri = AutoURI(src_uri)
-    localized = AutoURI(__class__.get_path_sep().join([
-        AbsPath._loc_prefix,
-        src_uri.get_dirname(no_scheme=True),
-        src_uri.get_basename()
-    ]))
-    return localized, True
-
+# recurse_json
+# recurse_tsv
+# recurse_csv
 
 def loc_recurse(uri, dest_uri_cls, make_md5_file=False):
     """Default recursion function for AutoURI's localize(recurse=True)    
