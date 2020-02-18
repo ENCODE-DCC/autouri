@@ -3,18 +3,18 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-from autouri.autouri import AutoURI, AutoURIMetadata, logger
 import os
 import requests
+from binascii import hexlify
+from base64 import b64decode
+from datetime import (datetime, timedelta)
+from dateutil.parser import parse as parse_timestamp
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
 from subprocess import (
     check_output, check_call, Popen, PIPE, CalledProcessError)
-from binascii import hexlify
-from base64 import b64decode
-from datetime import (datetime, timedelta)
-from dateutil.parser import parse as parse_timestamp
+from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_gcsuri(
@@ -118,8 +118,8 @@ class GCSURI(AutoURI):
             S3URI
             AbsPath
         """
-        from autouri.s3uri import S3URI
-        from autouri.abspath import AbsPath
+        from .s3uri import S3URI
+        from .abspath import AbsPath
 
         dest_uri = AutoURI(dest_uri)
 
@@ -147,8 +147,8 @@ class GCSURI(AutoURI):
             AbsPath
             HTTPURL
         """
-        from autouri.s3uri import S3URI
-        from autouri.abspath import AbsPath
+        from .s3uri import S3URI
+        from .abspath import AbsPath
 
         src_uri = AutoURI(src_uri)
 

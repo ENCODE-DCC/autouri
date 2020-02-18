@@ -16,13 +16,13 @@ Features:
 Author: Jin Lee (leepc12@gmail.com) at ENCODE-DCC
 """
 
-from collections import namedtuple
-from abc import ABC, abstractmethod
-from autouri.loc import get_loc_uri, loc_recurse
-import os
 import json
-import time
 import logging
+import os
+import time
+from abc import ABC, abstractmethod
+from collections import namedtuple
+from .loc import get_loc_uri, loc_recurse
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -193,7 +193,7 @@ class AutoURI(ABC):
     def lock(self):
         """Default locking mechanism uses FileSpinLock class
         """
-        from autouri.filespinlock import FileSpinLock
+        from .filespinlock import FileSpinLock
         return FileSpinLock(self)
 
     def cp(self, dest_uri, no_lock=False, no_checksum=False, make_md5_file=False):

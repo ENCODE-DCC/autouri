@@ -3,11 +3,11 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-from autouri.autouri import AutoURI, AutoURIMetadata, logger
+import hashlib
 import os
 import shutil
-import hashlib
 from filelock import FileLock
+from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_abspath(

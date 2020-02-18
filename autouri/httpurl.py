@@ -8,12 +8,12 @@ Features:
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-from autouri.autouri import AutoURI, AutoURIMetadata, logger
 import requests
 from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
 from dateutil.parser import parse as parse_timestamp
+from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 DEFAULT_HTTP_CHUNK_SIZE = 256*1024
@@ -149,9 +149,9 @@ class HTTPURL(AutoURI):
         """
         src_uri = AutoURI(src_uri)
 
-        from autouri.s3uri import S3URI
-        from autouri.gcsuri import GCSURI
-        from autouri.abspath import AbsPath
+        from .s3uri import S3URI
+        from .gcsuri import GCSURI
+        from .abspath import AbsPath
 
         if isinstance(src_uri, S3URI) and S3URI.can_presign():
             return AutoURI(src_uri.get_presigned_url()), False

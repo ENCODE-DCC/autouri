@@ -3,7 +3,7 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-from autouri.autouri import AutoURI, AutoURIMetadata, logger
+from .autouri import AutoURI, AutoURIMetadata, logger
 from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
@@ -118,7 +118,7 @@ class S3URI(AutoURI):
             S3URI
             AbsPath
         """
-        from autouri.abspath import AbsPath
+        from .abspath import AbsPath
 
         dest_uri = AutoURI(dest_uri)
         cl = S3URI.get_boto3_client()
@@ -147,7 +147,7 @@ class S3URI(AutoURI):
             AbsPath
             HTTPURL
         """
-        from autouri.abspath import AbsPath
+        from .abspath import AbsPath
 
         cl = S3URI.get_boto3_client()
         bucket, path = self.get_bucket_path()

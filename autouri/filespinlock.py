@@ -4,7 +4,7 @@
 Author: Jin Lee (leepc12@gmail.com) at ENCODE-DCC
 """
 
-from autouri.autouri import AutoURI, logger
+from .autouri import AutoURI, logger
 
 
 def init_filespinlock(
