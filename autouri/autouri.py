@@ -258,9 +258,9 @@ class AutoURI(ABC):
         try:
             if not self._cp(dest_uri=d):
                 d._cp_from(src_uri=self)
-        except:
+        except Exception as e:
             raise Exception('cp failed. src: {s} dest: {d}'.format(
-                s=str(self), d=str(d)))
+                s=str(self), d=str(d))) from e
 
         if not no_lock:
             self.lock.release()

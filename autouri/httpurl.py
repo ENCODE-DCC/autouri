@@ -134,8 +134,7 @@ class HTTPURL(AutoURI):
 
     @classmethod
     def get_http_chunk_size(cls) -> int:
-        if cls.HTTP_CHUNK_SIZE is not None:
-            if cls.HTTP_CHUNK_SIZE % (256*1024) > 0:
-                raise ValueError('http_chunk_size must be a multiple of 256KB (256*1024) '
-                                 'to be compatible with cloud storage APIs (GCS and AWS S3).')
+        if cls.HTTP_CHUNK_SIZE % (256*1024) > 0:
+            raise ValueError('http_chunk_size must be a multiple of 256 KB (256*1024 B) '
+                             'to be compatible with cloud storage APIs (GCS and AWS S3).')
         return cls.HTTP_CHUNK_SIZE
