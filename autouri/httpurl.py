@@ -18,7 +18,7 @@ from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_httpurl(
-    http_chunk_size: int=None):
+    http_chunk_size: Optional[int]=None):
     """
     Helper function to initialize HTTPURL class constants
         loc_prefix:

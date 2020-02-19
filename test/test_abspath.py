@@ -3,15 +3,18 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-import unittest
+import pytest
 from io import (StringIO, BytesIO)
 
 # import autouri
 # from autouri import AbsPath
 
-class TestAbsPath(unittest.TestCase):
-    def setUp(self):
-        pass
+def test_x():
+    assert(1==2)
 
-    def test_1(self):
-        self.assertEqual(1, 2)
+def test_y():
+    assert(3==4)
+
+def test_needsfiles(tmpdir):
+    print (tmpdir)
+    assert 0

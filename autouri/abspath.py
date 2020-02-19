@@ -12,11 +12,11 @@ from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_abspath(
-    loc_prefix: str=None,
-    map_path_to_url: Dict[str, str]=None,
-    filelock_max_polling: int=None,
-    filelock_sec_polling_interval: float=None,
-    md5_calc_chunk_size: int=None):
+    loc_prefix: Optional[str]=None,
+    map_path_to_url: Optional[Dict[str, str]]=None,
+    filelock_max_polling: Optional[int]=None,
+    filelock_sec_polling_interval: Optional[float]=None,
+    md5_calc_chunk_size: Optional[int]=None):
     """
     Helper function to initialize AbsPath class constants
         loc_prefix:

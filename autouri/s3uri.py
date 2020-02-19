@@ -16,8 +16,8 @@ from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_s3uri(
-    loc_prefix: str=None,
-    sec_duration_presigned_url: int=None):
+    loc_prefix: Optional[str]=None,
+    sec_duration_presigned_url: Optional[int]=None):
     """
     Helper function to initialize S3URI class constants
         loc_prefix:

@@ -8,9 +8,9 @@ from .autouri import AutoURI, logger
 
 
 def init_filespinlock(
-    max_polling=None,
-    sec_polling_interval=None,
-    lock_file_ext=None):
+    max_polling: Optional[int]=None,
+    sec_polling_interval: Optional[float]=None,
+    lock_file_ext: Optional[str]=None):
     """Helper function to initialize FileSpinLock class constants
     """
     if max_polling is not None:

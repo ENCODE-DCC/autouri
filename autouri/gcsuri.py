@@ -20,9 +20,9 @@ from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_gcsuri(
-    loc_prefix: str=None,
-    private_key_file: str=None,
-    sec_duration_presigned_url: int=None):
+    loc_prefix: Optional[str]=None,
+    private_key_file: Optional[str]=None,
+    sec_duration_presigned_url: Optional[int]=None):
     """Helper function to initialize GCSURI class constants
         loc_prefix:
             Inherited from AutoURI

@@ -21,7 +21,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import Any, List, Tuple, Callable, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Union
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
@@ -33,8 +33,8 @@ AutoURIMetadata = namedtuple('AutoURIMetadata', ('exists', 'mtime', 'size', 'md5
 
 
 def init_autouri(
-    md5_file_ext: str=None,
-    loc_recurse_ext_and_fnc: List[Tuple[str, Callable]]=None):
+    md5_file_ext: Optional[str]=None,
+    loc_recurse_ext_and_fnc: Optional[Dict[str, Callable]]=None):
     """Helper for initializing AutoURI class constants
     """
     if md5_file_ext is not None:
@@ -59,8 +59,8 @@ class AutoURI(ABC):
         MD5_FILE_EXT:
             File extention for md5 (.md5).
         LOC_RECURSE_EXT_AND_FNC:
-            List of tuples of file extension/function to recurse localization.
-                e.g. [('.json', recurse_dict), ('.tsv', recurse_tsv), ...]
+            Dict of (file extension, function) to recurse localization.
+                e.g. {'.json': recurse_dict, '.tsv': recurse_tsv}
         LOC_PREFIX:
             Cache path prefix for localization on this class' storage.
             This should be None for this base class but must be specified for subclasses.
@@ -74,11 +74,11 @@ class AutoURI(ABC):
             Suffix after recursive localization if file is modified
     """
     MD5_FILE_EXT: str = '.md5'
-    LOC_RECURSE_EXT_AND_FNC: List[Tuple[str, Callable]] = [
-        ('.json', recurse_json),
-        ('.tsv', recurse_tsv),
-        ('.csv', recurse_csv)
-    ]
+    LOC_RECURSE_EXT_AND_FNC: Dict[str, Callable] = {
+        '.json': recurse_json,
+        '.tsv': recurse_tsv,
+        '.csv': recurse_csv
+    }
     LOC_PREFIX: str = ''
 
     _OS_SEP: str = '/'
@@ -420,7 +420,7 @@ class AutoURI(ABC):
         if recursive:
         	# use cls.localize() itself as a callback fnc in recursion
             fnc_loc = lambda x: cls.localize(x, make_md5_file=make_md5_file, recursive=recursive)
-            for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC:
+            for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
                 if src_uri.ext == ext:
 		            # read source contents for recursive localization
                     src_contents = src_uri.read()
