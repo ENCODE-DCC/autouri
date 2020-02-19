@@ -5,7 +5,6 @@ Author: Jin Lee (leepc12@gmail.com)
 
 import unittest
 from io import (StringIO, BytesIO)
-from unittest.mock import patch
 
 # import autouri
 # from autouri import AbsPath

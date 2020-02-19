@@ -17,11 +17,8 @@ from dateutil.parser import parse as parse_timestamp
 from .autouri import AutoURI, AutoURIMetadata, logger
 
 
-DEFAULT_HTTP_CHUNK_SIZE = 256*1024
-
-
 def init_httpurl(
-    http_chunk_size=None):
+    http_chunk_size: int=None):
     """
     Helper function to initialize HTTPURL class constants
         loc_prefix:
@@ -40,10 +37,10 @@ class HTTPURL(AutoURI):
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
     """
-    HTTP_CHUNK_SIZE = DEFAULT_HTTP_CHUNK_SIZE
+    HTTP_CHUNK_SIZE: int = 256*1024
 
     _LOC_SUFFIX = '.url'
-    _SCHEME = ('http://', 'https://')
+    _SCHEMES = ('http://', 'https://')
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
@@ -130,13 +127,13 @@ class HTTPURL(AutoURI):
                         f.write(chunk)
             return True
 
-        return None
+        return False
 
     def _cp_from(self, src_uri):
         raise NotImplementedError('Read-only URI class.')
 
     @classmethod
-    def get_http_chunk_size(cls):
+    def get_http_chunk_size(cls) -> int:
         if cls.HTTP_CHUNK_SIZE is not None:
             if cls.HTTP_CHUNK_SIZE % (256*1024) > 0:
                 raise ValueError('http_chunk_size must be a multiple of 256KB (256*1024) '

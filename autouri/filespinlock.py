@@ -32,9 +32,9 @@ class FileSpinLock(object):
         LOCK_FILE_EXT
             Lock file extension (.lock)
     """
-    MAX_POLLING = 60
-    SEC_POLLING_INTERVAL = 30
-    LOCK_FILE_EXT = '.lock'
+    MAX_POLLING: int = 60
+    SEC_POLLING_INTERVAL: float = 30.0
+    LOCK_FILE_EXT: str = '.lock'
 
     def __init__(self, uri, max_polling=None, sec_polling_interval=None):
         """
@@ -98,7 +98,7 @@ class FileSpinLock(object):
                 'Possible race condition. f: {f}'.format(f=str(lock)))
         return
 
-    def __get_lock_file_uri():
+    def __get_lock_file_uri() -> AutoURI:
         """Get lock file URI.
         """
         return AutoURI(self._uri.uri + FileSpinLock.LOCK_FILE_EXT)

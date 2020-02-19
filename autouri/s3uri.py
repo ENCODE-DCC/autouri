@@ -4,7 +4,6 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-from .autouri import AutoURI, AutoURIMetadata, logger
 from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
@@ -12,11 +11,13 @@ from dateutil.parser import parse as parse_timestamp
 from boto3 import client
 from io import BytesIO
 from botocore.errorfactory import ClientError
+from typing import Tuple
+from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_s3uri(
-    loc_prefix=None,
-    sec_duration_presigned_url=None):
+    loc_prefix: str=None,
+    sec_duration_presigned_url: int=None):
     """
     Helper function to initialize S3URI class constants
         loc_prefix:
@@ -40,13 +41,13 @@ class S3URI(AutoURI):
         _BOTO3_CLIENT:
         _CACHED_PRESIGNED_URLS:
     """
-    SEC_DURATION_PRESIGNED_URL = 4233600
+    SEC_DURATION_PRESIGNED_URL: int = 4233600
 
     _BOTO3_CLIENT = None
     _CACHED_PRESIGNED_URLS = {}
 
     _LOC_SUFFIX = '.s3'
-    _SCHEME = 's3://'
+    _SCHEMES = ('s3://',)
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
@@ -141,7 +142,7 @@ class S3URI(AutoURI):
                 cl.download_file(Bucket=bucket, Key=path, Fileobj=fp)
             return True
 
-        return None
+        return False
 
     def _cp_from(self, src_uri):
         """Copy to S3URI from
@@ -175,16 +176,16 @@ class S3URI(AutoURI):
                     Bucket=bucket,
                     Key=path)
             return True
+
         raise NotImplementedError
 
-    def get_bucket_path(self):
+    def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
-        uri_wo_scheme = self._uri.replace(S3URI.get_scheme(), '', 1)
-        bucket, path = uri_wo_scheme.split(S3URI.get_path_sep(), 1)
+        bucket, path = self.uri_wo_scheme.split(S3URI.get_path_sep(), 1)
         return bucket, path
 
-    def get_presigned_url(self, use_cached=False):
+    def get_presigned_url(self, use_cached=False) -> str:
         cache = S3URI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:

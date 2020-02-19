@@ -17,12 +17,11 @@ Author: Jin Lee (leepc12@gmail.com)
 """
 
 import hashlib
-import json
 import logging
 import os
-import time
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from typing import List, Tuple, Callable, Union
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
@@ -34,8 +33,8 @@ AutoURIMetadata = namedtuple('AutoURIMetadata', ('exists', 'mtime', 'size', 'md5
 
 
 def init_autouri(
-    md5_file_ext=None,
-    loc_recurse_ext_and_fnc=None):
+    md5_file_ext: str=None,
+    loc_recurse_ext_and_fnc: List[Tuple[str, Callable]]=None):
     """Helper for initializing AutoURI class constants
     """
     if md5_file_ext is not None:
@@ -60,7 +59,7 @@ class AutoURI(ABC):
         MD5_FILE_EXT:
             File extention for md5 (.md5).
         LOC_RECURSE_EXT_AND_FNC:
-            Tuple of tuples of file extension (including dot) and function to recurse in it.
+            List of tuples of file extension/function to recurse localization.
                 e.g. [('.json', recurse_dict), ('.tsv', recurse_tsv), ...]
         LOC_PREFIX:
             Cache path prefix for localization on this class' storage.
@@ -69,22 +68,22 @@ class AutoURI(ABC):
     Protected class constants:
         _OS_SEP:
             Separator for directory.
-        _SCHEME:
-            Scheme string (str or tuple of str)
+        _SCHEMES:
+            Scheme strings (tuple of str)
         _LOC_SUFFIX:
             Suffix after recursive localization if file is modified
     """
     MD5_FILE_EXT = '.md5'
-    LOC_RECURSE_EXT_AND_FNC = (
-        ('.json', recurse_json_contents),
-        ('.tsv', recurse_tsv_contents),
-        ('.csv', recurse_csv_contents)
-    )
-    LOC_PREFIX = None
+    LOC_RECURSE_EXT_AND_FNC: List[Tuple[str, Callable]] = [
+        ('.json', recurse_json),
+        ('.tsv', recurse_tsv),
+        ('.csv', recurse_csv)
+    ]
+    LOC_PREFIX = ''
 
     _OS_SEP = '/'
-    _SCHEME = None
-    _LOC_SUFFIX = None
+    _SCHEMES = tuple()
+    _LOC_SUFFIX = ''
 
     def __init__(self, uri, cls=None):
         """
@@ -109,36 +108,37 @@ class AutoURI(ABC):
         return self._uri
 
     @property
-    def uri_wo_ext(self):
+    def uri_wo_ext(self) -> str:
         return os.path.splitext(self._uri)[0]
 
     @property
-    def is_valid(self):
-        scheme = self.__class__.get_scheme()
-        return scheme is not None and self._uri.startswith(scheme)
+    def uri_wo_scheme(self) -> str:
+        for s in self.__class__.get_schemes():
+            if s and self._uri.startswith(s):
+                return self._uri.replace(s, '', 1)
+        return self._uri
 
     @property
-    def dirname(self):
+    def is_valid(self) -> bool:
+        for s in self.__class__.get_schemes():
+            if s and self._uri.startswith(s):
+                return True
+        return False
+
+    @property
+    def dirname(self) -> str:
         """Dirname with a scheme (gs://, s3://, http://, /, ...).
         """
         return os.path.dirname(self._uri)
 
     @property
-    def dirname_wo_scheme(self):
+    def dirname_wo_scheme(self) -> str:
         """Dirname without a scheme (gs://, s3://, http://, /, ...).
         """
-        scheme = self.__class__.get_scheme()
-        if isinstance(scheme, str):
-            scheme = (scheme,)
-        dirname = self.dirname
-        for s in scheme:
-            if dirname.startswith(s):
-                dirname = dirname.replace(s, '', 1)
-                break
-        return dirname
+        return os.path.dirname(self.uri_wo_scheme)
 
     @property
-    def loc_dirname(self):
+    def loc_dirname(self) -> str:
         """Dirname to be appended to target cls' LOC_PREFIX after localization.
     
         e.g. localization of src_uri on target cls
@@ -147,47 +147,47 @@ class AutoURI(ABC):
         return self.dirname_wo_scheme
 
     @property
-    def basename(self):
+    def basename(self) -> str:
         """Basename.
         """
         return os.path.basename(self._uri)
 
     @property
-    def basename_wo_ext(self):
+    def basename_wo_ext(self) -> str:
         """Basename without extension.
         """
         return os.path.splitext(self.basename)[0]
 
     @property
-    def ext(self):
+    def ext(self) -> str:
         """File extension.
         """
         return os.path.splitext(self.basename)[1]
 
     @property
-    def exists(self):
+    def exists(self) -> bool:
         return self.get_metadata(skip_md5=True).exists
 
     @property
-    def mtime(self):
+    def mtime(self) -> float:
         """Seconds since the epoch.
         """
         return self.get_metadata(skip_md5=True).mtime
 
     @property
-    def size(self): 
+    def size(self) -> int: 
         """Size in bytes.
         """
         return self.get_metadata(skip_md5=True).size
 
     @property
-    def md5(self):
+    def md5(self) -> str:
         """Md5 hash hexadecimal digest string.        
         """
         return self.get_metadata().md5
 
     @property
-    def md5_from_file(self):
+    def md5_from_file(self) -> str:
         """Get md5 from a md5 file (.md5) if it exists.
         """
         u_md5 = self.__get_md5_file_uri()
@@ -205,13 +205,13 @@ class AutoURI(ABC):
         return None
 
     @property
-    def lock(self):
-        """Default locking mechanism uses FileSpinLock class
+    def lock(self) -> FileSpinLock:
+        """Default locking mechanism using FileSpinLock class
         """
         from .filespinlock import FileSpinLock
         return FileSpinLock(self)
 
-    def cp(self, dest_uri, no_lock=False, no_checksum=False, make_md5_file=False):
+    def cp(self, dest_uri, no_lock=False, no_checksum=False, make_md5_file=False) -> AutoURI:
         """Makes a copy on destination. It is protected by a locking mechanism.
         Check md5 hash, file size and last modified date if possible to prevent
         unnecessary re-uploading.
@@ -226,6 +226,8 @@ class AutoURI(ABC):
             make_md5_file:
                 Make an md5 file on destination if metadata doesn't have md5
                 assuming that you have write permission on target's directory
+        Returns:
+            Copy on destination
         """
         d = AutoURI(dest_uri)
 
@@ -251,10 +253,12 @@ class AutoURI(ABC):
             self.lock.acquire()
 
         # if src.cp(dest) fails then try dest.cp_from(src)
-        if self._cp(dest_uri=d) is None:
-            if d._cp_from(src_uri=self) is None:
-                raise Exception('cp failed. src: {s} dest: {d}'.format(
-                    s=str(self), d=str(d)))
+        try:
+            if not self._cp(dest_uri=d):
+                d._cp_from(src_uri=self)
+        except:
+            raise Exception('cp failed. src: {s} dest: {d}'.format(
+                s=str(self), d=str(d)))
 
         if not no_lock:
             self.lock.release()
@@ -278,7 +282,7 @@ class AutoURI(ABC):
         return
 
     @abstractmethod
-    def get_metadata(self, skip_md5=False, make_md5_file=False):
+    def get_metadata(self, skip_md5=False, make_md5_file=False) -> AutoURIMetadata:
         """Metadata of a URI.
         This is more efficient than individually retrieving each item.
         md5 can be None. For example, HTTP URLs.
@@ -292,7 +296,7 @@ class AutoURI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def read(self, byte=False):
+    def read(self, byte=False) -> Union[str, bytes]:
         """Reads string/byte from a URI.
         """
         raise NotImplementedError
@@ -312,7 +316,7 @@ class AutoURI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _cp(self, dest_uri):
+    def _cp(self, dest_uri) -> bool:
         """Makes a copy on destination. This is NOT protected by a locking mechanism.
         Also, there is no checksum test for this function.
         A file lock/checksum is already implemented in a higher level AutoURI.cp().
@@ -320,12 +324,12 @@ class AutoURI(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _cp_from(self, src_uri):
+    def _cp_from(self, src_uri) -> bool:
         """Reversed version of "_cp".
-        "cp" is a binary operation so it can be defined in either source or destination
+        _cp is a binary operation so it can be defined in either source or destination
         URI class.
 
-        A member function "_cp" is called first and if it returns None
+        A member function "_cp" is called first and if it returns False
         then this function will be called with reversed source and destination.
 
         This function is useful to be defined for user's custom classes inherited from 
@@ -334,7 +338,7 @@ class AutoURI(ABC):
         raise NotImplementedError
 
     def __auto_detect(self, cls=None):
-        """Detects URI's class by iterating over all sub URI classes.
+        """Detects and set URI's class by iterating over all sub URI classes.
         """
         if self.__class__ is not AutoURI:
             return
@@ -349,27 +353,27 @@ class AutoURI(ABC):
         self.__class__ = NoURI
         return
 
-    def __get_md5_file_uri():
+    def __get_md5_file_uri() -> AutoURI:
         """Get md5 file URI.
-        """        
-        return AutoURI(self._uri.uri + AutoURI.MD5_FILE_EXT)
+        """
+        return AutoURI(self._uri + AutoURI.MD5_FILE_EXT)
 
     @classmethod
-    def get_path_sep(cls):
+    def get_path_sep(cls) -> str:
         """Separator for directory.
         """
         return cls._OS_SEP
 
     @classmethod
-    def get_scheme(cls):
-        """Scheme or tuple of schemes.
+    def get_schemes(cls) -> Tuple[str, ...]:
+        """Tuple of scheme strings.
 
-        e.g. gs://, s3://, (http://, https://)
+        e.g. (gs://,), (s3://,), (http://, https://), tuple()
         """
-        return cls._SCHEME
+        return cls._SCHEMES
 
     @classmethod
-    def get_loc_suffix(cls):
+    def get_loc_suffix(cls) -> str:
         """File suffix for a MODIFIED file after recursive localization.
         This is required to distinguish a modified file from an original one.
 
@@ -378,13 +382,14 @@ class AutoURI(ABC):
         return cls._LOC_SUFFIX
 
     @classmethod
-    def get_loc_prefix(cls):
+    def get_loc_prefix(cls) -> str:
         """Cache directory root path for localization.
+        Tailing slash will be removed.
         """
-        return cls.LOC_PREFIX
+        return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
 
     @classmethod
-    def localize(cls, src_uri, make_md5_file=False, recursive=False):
+    def localize(cls, src_uri, make_md5_file=False, recursive=False) -> Tuple[str, bool]:
         """Localize a URI on this URI class (cls).
 
         Args:
@@ -401,7 +406,7 @@ class AutoURI(ABC):
                 Localized URI STRING (not a AutoURI instance) since it should be used
                 for external function as a callback function.
             modified:
-                Whether localized file is modifed or not.
+                Whether localized file is modified or not.
                 Modified URI is suffixed with this cls' storage type (e.g. .s3.).
         """
         src_uri = AutoURI(src_uri)
@@ -411,10 +416,11 @@ class AutoURI(ABC):
 
         modified = False
         if recursive:
-            # read source contents for recursive localization
+        	# use cls.localize() itself as a callback fnc in recursion
             fnc_loc = lambda x: cls.localize(x, make_md5_file=make_md5_file, recursive=recursive)
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC:
                 if src_uri.ext == ext:
+		            # read source contents for recursive localization
                     src_contents = src_uri.read()
                     maybe_modified_contents, modified = fnc_recurse(src_contents, fnc_loc)
                     break

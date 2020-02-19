@@ -7,12 +7,16 @@ Author: Jin Lee (leepc12@gmail.com)
 import hashlib
 import os
 import shutil
-from filelock import FileLock
+from typeing import Dict
 from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_abspath(
-    loc_prefix=None):
+    loc_prefix: str=None,
+    map_path_to_url: Dict[str, str]=None,
+    filelock_max_polling: int=None,
+    filelock_sec_polling_interval: float=None,
+    md5_calc_chunk_size: int=None):
     """
     Helper function to initialize AbsPath class constants
         loc_prefix:
@@ -20,6 +24,14 @@ def init_abspath(
     """
     if loc_prefix is not None:
         AbsPath.LOC_PREFIX = loc_prefix
+    if map_path_to_url is not None:
+        AbsPath.MAP_PATH_TO_URL = map_path_to_url
+    if filelock_max_polling is not None:
+        AbsPath.FILELOCK_MAX_POLLING = filelock_max_polling
+    if filelock_sec_polling_interval is not None:
+        AbsPath.FILELOCK_SEC_POLLING_INTERVAL = filelock_sec_polling_interval
+    if md5_calc_chunk_size is not None:
+        AbsPath.MD5_CALC_CHUNK_SIZE = md5_calc_chunk_size
 
 
 class AbsPath(AutoURI):
@@ -36,14 +48,13 @@ class AbsPath(AutoURI):
             Default polling interval in seconds (way more frequent than default).
 
     """
-    MAP_PATH_TO_URL = None
-    FILELOCK_MAX_POLLING = 18000
-    FILELOCK_SEC_POLLING_INTERVAL = 0.1
-    MD5_CALC_CHUNK_SIZE = 4096
+    MAP_PATH_TO_URL: Dict[str, str] = dict()
+    FILELOCK_MAX_POLLING: int = 18000
+    FILELOCK_SEC_POLLING_INTERVAL: float = 0.1
+    MD5_CALC_CHUNK_SIZE: int = 4096
 
     _LOC_SUFFIX = '.local'
     _OS_SEP = os.sep
-    _SCHEME = None
 
     def __init__(self, uri):
         uri = os.path.expanduser(uri)
@@ -55,9 +66,9 @@ class AbsPath(AutoURI):
 
     @property
     def lock(self):
-        """Locking mechanism uses FileSpinLock class with faster polling
+        """Locking mechanism useing FileSpinLock class with much faster polling
         """
-        from autouri.filespinlock import FileSpinLock
+        from .filespinlock import FileSpinLock
         return FileSpinLock(
             self,
             max_polling=AbsPath.FILELOCK_MAX_POLLING,
@@ -115,15 +126,14 @@ class AbsPath(AutoURI):
             dest_uri.mkdir_dirname()
             shutil.copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
             return True
-
-        return None
+        return False
 
     def _cp_from(self, src_uri):
         raise NotImplementedError
 
-    def get_mapped_url(self):
-        for k, v in AbsPath.MAP_PATH_TO_URL:
-            if self._uri.startswith(k):
+    def get_mapped_url(self) -> str:
+        for k, v in AbsPath.MAP_PATH_TO_URL.items():
+            if k and self._uri.startswith(k):
                 return self._uri.replace(k, v, 1)
         raise ValueError('Cannot find a mapping from AbsPath to HTTPURL.')
 
@@ -132,5 +142,5 @@ class AbsPath(AutoURI):
         return
 
     @classmethod
-    def can_map_to_url(cls):
+    def can_map_to_url(cls) -> bool:
         return cls.MAP_PATH_TO_URL is not None

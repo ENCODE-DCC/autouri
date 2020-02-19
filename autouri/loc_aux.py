@@ -4,11 +4,11 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
-import os
 import json
+from typing import Tuple, Callable
 
 
-def recurse_json(contents, fnc):
+def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
     """Recurse with a callback function in JSON objects.
     Converts contents str into dict. This function is a wrapper for recurse_dict.
 
@@ -59,7 +59,7 @@ def recurse_json(contents, fnc):
     return json.dumps(d, indent=4), modified
 
 
-def recurse_tsv(contents, fnc, delim='\t'):
+def recurse_tsv(contents: str, fnc: Callable, delim: str='\t') -> Tuple[str, bool]::
     """Recurse with a callback function in TSV contents.
     Just visit each line and look at values only.
 
@@ -92,5 +92,5 @@ def recurse_tsv(contents, fnc, delim='\t'):
     return '\n'.join(new_contents), modified
 
 
-def recurse_csv(contents, fnc, delim=','):
+def recurse_csv(contents: str, fnc: Callable, delim: str=',') -> Tuple[str, bool]::
     return recurse_tsv(contents, fnc, delim=delim)

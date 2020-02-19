@@ -15,13 +15,14 @@ from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
 from subprocess import (
     check_output, check_call, Popen, PIPE, CalledProcessError)
+from typing import Tuple
 from .autouri import AutoURI, AutoURIMetadata, logger
 
 
 def init_gcsuri(
-    loc_prefix=None,
-    private_key_file=None,
-    sec_duration_presigned_url=None):
+    loc_prefix: str=None,
+    private_key_file: str=None,
+    sec_duration_presigned_url: int=None):
     """Helper function to initialize GCSURI class constants
         loc_prefix:
             Inherited from AutoURI
@@ -48,14 +49,14 @@ class GCSURI(AutoURI):
         _GCS_CLIENT:
         _CACHED_PRESIGNED_URLS:
     """
-    PRIVATE_KEY_FILE = None
-    SEC_DURATION_PRESIGNED_URL = 4233600
+    PRIVATE_KEY_FILE: str = None
+    SEC_DURATION_PRESIGNED_URL: int = 4233600
 
     _GCS_CLIENT = None
     _CACHED_PRESIGNED_URLS = {}
 
     _LOC_SUFFIX = '.gcs'
-    _SCHEME = 'gs://'
+    _SCHEMES = ('gs://',)
 
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
@@ -176,7 +177,7 @@ class GCSURI(AutoURI):
 
         raise NotImplementedError
 
-    def get_blob(self, new=False):
+    def get_blob(self, new=False) -> Blob:
         bucket, path = self.get_bucket_path()
         if new:
             return Blob(path, bucket)
@@ -184,14 +185,13 @@ class GCSURI(AutoURI):
             cl = GCSURI.get_gcs_client()
             return cl.get_bucket(bucket).get_blob(path)
 
-    def get_bucket_path(self):
+    def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
-        uri_wo_scheme = self._uri.replace(GCSURI.get_scheme(), '', 1)
-        bucket, path = uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
+        bucket, path = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
         return bucket, path
 
-    def get_presigned_url(self, use_cached=False):
+    def get_presigned_url(self, use_cached=False) -> str:
         cache = GCSSURI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:
@@ -208,7 +208,7 @@ class GCSURI(AutoURI):
         return url
 
     @classmethod
-    def get_gcs_client(cls):
+    def get_gcs_client(cls) -> storage.Client:
         if cls._GCS_CLIENT is None:
             cls._GCS_CLIENT = storage.Client()
         return cls._GCS_CLIENT
