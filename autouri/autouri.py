@@ -267,20 +267,28 @@ class AutoURI(ABC):
 
         return d
 
-    def write(self, s):
+    def write(self, s, no_lock=False):
         """Write string/bytes to file. It is protected by a locking mechanism.
         """
-        self.lock.acquire()
+        if not no_lock:
+            self.lock.acquire()
+
         self._write(s)
-        self.lock.release()
+
+        if not no_lock:
+            self.lock.release()
         return
 
-    def rm(self):
+    def rm(self, no_lock=False):
         """Remove a URI from its storage. It is protected by by a locking mechanism.
         """
-        self.lock.acquire()
-        self._rm(s)
-        self.lock.release()
+        if not no_lock:
+            self.lock.acquire()
+
+        self._rm()
+
+        if not no_lock:
+            self.lock.release()
         return
 
     @abstractmethod

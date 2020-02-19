@@ -4,6 +4,7 @@
 Author: Jin Lee (leepc12@gmail.com)
 """
 
+from typing import Union
 from .autouri import AutoURI, logger
 
 
@@ -36,7 +37,9 @@ class FileSpinLock(object):
     SEC_POLLING_INTERVAL: float = 30.0
     LOCK_FILE_EXT: str = '.lock'
 
-    def __init__(self, uri, max_polling=None, sec_polling_interval=None):
+    def __init__(
+        self, uri: Union[AutoURI, str],
+        max_polling: int=None, sec_polling_interval: float=None):
         """
         Args:
             max_polling:                
@@ -44,9 +47,8 @@ class FileSpinLock(object):
             sec_polling_interval:
                 If not defined use default FileSpinLock.SEC_POLLING_INTERVAL
         """
-        if isinstance(uri, str):
-            uri = AutoURI(uri)
-        elif not isinstance(uri, AutoURI):
+        uri = AutoURI(uri)
+        if not uri.is_valid:
             raise ValueError('URI is not valid.')
 
         self._uri = uri
@@ -75,7 +77,7 @@ class FileSpinLock(object):
                 time.sleep(self._sec_polling_interval)
                 if not self._lock.exists()
                     return
-            raise Exception(
+            raise RuntimeError(
                 'A lock file has not been removed for {m} x {i} seconds. '
                 'Possible race condition or dead lock? '
                 'Check if another process is holding this lock file and '
@@ -85,14 +87,14 @@ class FileSpinLock(object):
                     f=str(lock)))
         else:
             logger.debug('Creating a lock file... {f}'.format(f=str(self._lock)))
-            self._lock.write_lockless('')
+            self._lock.write('', no_lock=False)
         return
 
     def release(self):
         """Release lock.
         """
         if self._lock.exists():
-            lock.rm_lockless()
+            lock.rm(no_lock=True)
         else:
             raise Exception('Lock file has been removed by another process. '
                 'Possible race condition. f: {f}'.format(f=str(lock)))
