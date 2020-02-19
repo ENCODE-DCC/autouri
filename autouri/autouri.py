@@ -21,7 +21,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from typing import List, Tuple, Callable, Union
+from typing import Any, List, Tuple, Callable, Union
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
@@ -73,17 +73,17 @@ class AutoURI(ABC):
         _LOC_SUFFIX:
             Suffix after recursive localization if file is modified
     """
-    MD5_FILE_EXT = '.md5'
+    MD5_FILE_EXT: str = '.md5'
     LOC_RECURSE_EXT_AND_FNC: List[Tuple[str, Callable]] = [
         ('.json', recurse_json),
         ('.tsv', recurse_tsv),
         ('.csv', recurse_csv)
     ]
-    LOC_PREFIX = ''
+    LOC_PREFIX: str = ''
 
-    _OS_SEP = '/'
-    _SCHEMES = tuple()
-    _LOC_SUFFIX = ''
+    _OS_SEP: str = '/'
+    _SCHEMES: Tuple[str, ...] = tuple()
+    _LOC_SUFFIX: str = ''
 
     def __init__(self, uri, cls=None):
         """
@@ -104,24 +104,26 @@ class AutoURI(ABC):
         return str(self._uri)
 
     @property
-    def uri(self):
+    def uri(self) -> Any:
+        """Can store any type of variable.
+        """
         return self._uri
 
     @property
     def uri_wo_ext(self) -> str:
-        return os.path.splitext(self._uri)[0]
+        return os.path.splitext(str(self._uri))[0]
 
     @property
     def uri_wo_scheme(self) -> str:
         for s in self.__class__.get_schemes():
-            if s and self._uri.startswith(s):
-                return self._uri.replace(s, '', 1)
-        return self._uri
+            if s and str(self._uri).startswith(s):
+                return str(self._uri).replace(s, '', 1)
+        return str(self._uri)
 
     @property
     def is_valid(self) -> bool:
         for s in self.__class__.get_schemes():
-            if s and self._uri.startswith(s):
+            if s and str(self._uri).startswith(s):
                 return True
         return False
 
@@ -129,7 +131,7 @@ class AutoURI(ABC):
     def dirname(self) -> str:
         """Dirname with a scheme (gs://, s3://, http://, /, ...).
         """
-        return os.path.dirname(self._uri)
+        return os.path.dirname(str(self._uri))
 
     @property
     def dirname_wo_scheme(self) -> str:
@@ -150,7 +152,7 @@ class AutoURI(ABC):
     def basename(self) -> str:
         """Basename.
         """
-        return os.path.basename(self._uri)
+        return os.path.basename(str(self._uri))
 
     @property
     def basename_wo_ext(self) -> str:
@@ -356,7 +358,7 @@ class AutoURI(ABC):
     def __get_md5_file_uri() -> AutoURI:
         """Get md5 file URI.
         """
-        return AutoURI(self._uri + AutoURI.MD5_FILE_EXT)
+        return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
     @classmethod
     def get_path_sep(cls) -> str:
@@ -453,7 +455,7 @@ class AutoURI(ABC):
 
 class NoURI(AutoURI):
     """Trivial class to represent all non-AutoURI types.
-    This class is useful just to store value in self._uri.
+    This class is useful just to store any type of value in self._uri.
     """
     def __init__(self, uri):
         super().__init__(uri, cls=self.__class__)
