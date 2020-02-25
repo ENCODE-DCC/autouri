@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
-"""HTTPURL class
-
-Features:    
-    - Wraps Python requests for HTTP URLs.
-    - Can convert a bucket URI into a public URL by presigning
-        - e.g. for genome browsers
-
-Author: Jin Lee (leepc12@gmail.com)
-"""
-
 import requests
 from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
 from dateutil.parser import parse as parse_timestamp
-from .autouri import AutoURI, AutoURIMetadata, logger
+from typing import Optional
+from .uribase import URIBase, URIMetadata, logger
+from .autouri import AutoURI
 
 
 def init_httpurl(
@@ -22,17 +14,17 @@ def init_httpurl(
     """
     Helper function to initialize HTTPURL class constants
         loc_prefix:
-            Inherited from AutoURI
+            Inherited from URIBase
     """
     if http_chunk_size is not None:
         HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
 
 
-class HTTPURL(AutoURI):
+class HTTPURL(URIBase):
     """
     Class constants:
         LOC_PREFIX:
-            Path prefix for localization. Inherited from AutoURI class.
+            Path prefix for localization. Inherited from URIBase class.
         HTTP_CHUNK_SIZE:
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
@@ -43,7 +35,7 @@ class HTTPURL(AutoURI):
     _SCHEMES = ('http://', 'https://')
 
     def __init__(self, uri):
-        super().__init__(uri, cls=self.__class__)
+        super().__init__(uri)
 
     @property
     def loc_dirname(self):
@@ -86,7 +78,7 @@ class HTTPURL(AutoURI):
         if md5 is None and not skip_md5:
             md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
 
-        return AutoURIMetadata(
+        return URIMetadata(
             exists=ex,
             mtime=mt,
             size=sz,
@@ -94,7 +86,7 @@ class HTTPURL(AutoURI):
 
     def read(self, byte=False):
         r = requests.get(
-            url, stream=True, allow_redirects=True,
+            self._uri, stream=True, allow_redirects=True,
             headers=requests.utils.default_headers())
         r.raise_for_status()
         b = r.raw.read()
@@ -132,9 +124,9 @@ class HTTPURL(AutoURI):
     def _cp_from(self, src_uri):
         raise NotImplementedError('Read-only URI class.')
 
-    @classmethod
-    def get_http_chunk_size(cls) -> int:
-        if cls.HTTP_CHUNK_SIZE % (256*1024) > 0:
+    @staticmethod
+    def get_http_chunk_size() -> int:
+        if HTTPURL.HTTP_CHUNK_SIZE % (256*1024) > 0:
             raise ValueError('http_chunk_size must be a multiple of 256 KB (256*1024 B) '
                              'to be compatible with cloud storage APIs (GCS and AWS S3).')
-        return cls.HTTP_CHUNK_SIZE
+        return HTTPURL.HTTP_CHUNK_SIZE

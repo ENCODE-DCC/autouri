@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
-"""FileSpinLock class
-
-Author: Jin Lee (leepc12@gmail.com)
-"""
-
-from typing import Union
-from .autouri import AutoURI, logger
+from typing import Optional, Union
+from .uribase import logger
+from .autouri import AutoURI
 
 
 def init_filespinlock(
@@ -67,7 +63,7 @@ class FileSpinLock(object):
         """Check if a lock file disappears every self._sec_lock_interval seconds
         up to self._max_polling times.
         """
-        if self._lock.exists():
+        if self._lock.exists:
             i = 0
             while i <= self._max_polling:
                 i += 1
@@ -75,7 +71,7 @@ class FileSpinLock(object):
                     logger.info('Waiting for a lock file to be released... '
                         '{f}'.format(f=str(self._lock)))
                 time.sleep(self._sec_polling_interval)
-                if not self._lock.exists()
+                if not self._lock.exists:
                     return
             raise RuntimeError(
                 'A lock file has not been removed for {m} x {i} seconds. '
@@ -87,20 +83,20 @@ class FileSpinLock(object):
                     f=str(lock)))
         else:
             logger.debug('Creating a lock file... {f}'.format(f=str(self._lock)))
-            self._lock.write('', no_lock=False)
+            self._lock.write('', no_lock=True)
         return
 
     def release(self):
         """Release lock.
         """
-        if self._lock.exists():
-            lock.rm(no_lock=True)
+        if self._lock.exists:
+            self._lock.rm(no_lock=True)
         else:
             raise Exception('Lock file has been removed by another process. '
                 'Possible race condition. f: {f}'.format(f=str(lock)))
         return
 
-    def __get_lock_file_uri() -> AutoURI:
+    def __get_lock_file_uri(self) -> AutoURI:
         """Get lock file URI.
         """
         return AutoURI(self._uri.uri + FileSpinLock.LOCK_FILE_EXT)

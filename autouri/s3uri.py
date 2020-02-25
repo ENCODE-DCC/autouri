@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""S3URI class
-
-Author: Jin Lee (leepc12@gmail.com)
-"""
-
 from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
@@ -11,8 +6,9 @@ from dateutil.parser import parse as parse_timestamp
 from boto3 import client
 from io import BytesIO
 from botocore.errorfactory import ClientError
-from typing import Tuple
-from .autouri import AutoURI, AutoURIMetadata, logger
+from typing import Tuple, Optional
+from .uribase import URIBase, URIMetadata, logger
+from .autouri import AutoURI
 
 
 def init_s3uri(
@@ -21,7 +17,7 @@ def init_s3uri(
     """
     Helper function to initialize S3URI class constants
         loc_prefix:
-            Inherited from AutoURI
+            Inherited from URIBase
     """
     if loc_prefix is not None:
         S3URI.LOC_PREFIX = loc_prefix
@@ -29,11 +25,11 @@ def init_s3uri(
         S3URI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
 
 
-class S3URI(AutoURI):
+class S3URI(URIBase):
     """
     Class constants:
         LOC_PREFIX:
-            Path prefix for localization. Inherited from AutoURI class.
+            Path prefix for localization. Inherited from URIBase class.
         SEC_DURATION_PRESIGNED_URL:
             Duration for presigned URLs
 
@@ -50,7 +46,7 @@ class S3URI(AutoURI):
     _SCHEMES = ('s3://',)
 
     def __init__(self, uri):
-        super().__init__(uri, cls=self.__class__)
+        super().__init__(uri)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = None, None, None, None
@@ -82,7 +78,7 @@ class S3URI(AutoURI):
         if md5 is None and not skip_md5:
             md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
 
-        return AutoURIMetadata(
+        return URIMetadata(
             exists=ex,
             mtime=mt,
             size=sz,
@@ -94,8 +90,8 @@ class S3URI(AutoURI):
 
         obj = cl.get_object(Bucket=bucket, Key=path)
         if byte:
-            return obj['Body'].reads()
-        return obj['Body'].reads().decode()
+            return obj['Body'].read()
+        return obj['Body'].read().decode()
 
     def _write(self, s):
         cl = S3URI.get_boto3_client()
@@ -131,7 +127,7 @@ class S3URI(AutoURI):
             cl.copy_object(
                 CopySource={
                     'Bucket': bucket,
-                    'Key': path}
+                    'Key': path},
                 Bucket=dest_bucket,
                 Key=dest_path)
             return True
@@ -185,22 +181,23 @@ class S3URI(AutoURI):
         bucket, path = self.uri_wo_scheme.split(S3URI.get_path_sep(), 1)
         return bucket, path
 
-    def get_presigned_url(self, use_cached=False) -> str:
+    def get_presigned_url(self, sec_duration=None, use_cached=False) -> str:
         cache = S3URI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:
                 return cache[self._uri]
         cl = S3URI.get_boto3_client()
         bucket, path = self.get_bucket_path()
+        duration = sec_duration if sec_duration is not None else S3URI.SEC_DURATION_PRESIGNED_URL
         url = cl.generate_presigned_url(
             'get_object',
             Params={'Bucket': bucket, 'Key': path},
-            ExpiresIn=S3URI.SEC_DURATION_PRESIGNED_URL)
+            ExpiresIn=duration)
         cache[self._uri] = url
         return url
 
     @staticmethod
-    def get_boto3_client():
-        if cls._BOTO3_CLIENT is None:
-            cls._BOTO3_CLIENT = client('s3')
-        return cls._BOTO3_CLIENT
+    def get_boto3_client() -> client:
+        if S3URI._BOTO3_CLIENT is None:
+            S3URI._BOTO3_CLIENT = client('s3')
+        return S3URI._BOTO3_CLIENT

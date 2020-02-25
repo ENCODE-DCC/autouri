@@ -1,9 +1,4 @@
 #!/usr/bin/env python3
-"""GCSURI class
-
-Author: Jin Lee (leepc12@gmail.com)
-"""
-
 import os
 import requests
 from binascii import hexlify
@@ -15,8 +10,9 @@ from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
 from subprocess import (
     check_output, check_call, Popen, PIPE, CalledProcessError)
-from typing import Tuple
-from .autouri import AutoURI, AutoURIMetadata, logger
+from typing import Tuple, Optional
+from .uribase import URIBase, URIMetadata, logger
+from .autouri import AutoURI
 
 
 def init_gcsuri(
@@ -25,7 +21,7 @@ def init_gcsuri(
     sec_duration_presigned_url: Optional[int]=None):
     """Helper function to initialize GCSURI class constants
         loc_prefix:
-            Inherited from AutoURI
+            Inherited from URIBase
     """
     if loc_prefix is not None:
         GCSURI.LOC_PREFIX = loc_prefix
@@ -35,11 +31,11 @@ def init_gcsuri(
         GCSURI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
 
 
-class GCSURI(AutoURI):
+class GCSURI(URIBase):
     """
     Class constants:
         LOC_PREFIX:
-            Path prefix for localization. Inherited from AutoURI class.
+            Path prefix for localization. Inherited from URIBase class.
         PRIVATE_KEY_FILE:
             Path for private key file used to get presigned URLs
         SEC_DURATION_PRESIGNED_URL:
@@ -59,7 +55,7 @@ class GCSURI(AutoURI):
     _SCHEMES = ('gs://',)
 
     def __init__(self, uri):
-        super().__init__(uri, cls=self.__class__)
+        super().__init__(uri)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = None, None, None, None
@@ -89,7 +85,7 @@ class GCSURI(AutoURI):
         if md5 is None and not skip_md5:
             md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
 
-        return AutoURIMetadata(
+        return URIMetadata(
             exists=ex,
             mtime=mt,
             size=sz,
@@ -191,7 +187,7 @@ class GCSURI(AutoURI):
         bucket, path = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
         return bucket, path
 
-    def get_presigned_url(self, use_cached=False) -> str:
+    def get_presigned_url(self, sec_duration=None, use_cached=False) -> str:
         cache = GCSSURI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:
@@ -201,14 +197,15 @@ class GCSURI(AutoURI):
         if not os.path.exists(private_key_file):
             raise Exception('GCS private key file not found')
         credentials = Credentials.from_service_account_file(private_key_file)
+        duration = sec_duration if sec_duration is not None else GSSURI.SEC_DURATION_PRESIGNED_URL        
         url = blob.generate_signed_url(
-            expiration=timedelta(seconds=GCSURI._sec_duration_presigned_url),
+            expiration=timedelta(seconds=duration),
             credentials=credentials)
         cache[self._uri] = url
         return url
 
-    @classmethod
-    def get_gcs_client(cls) -> storage.Client:
-        if cls._GCS_CLIENT is None:
-            cls._GCS_CLIENT = storage.Client()
-        return cls._GCS_CLIENT
+    @staticmethod
+    def get_gcs_client() -> storage.Client:
+        if GCSURI._GCS_CLIENT is None:
+            GCSURI._GCS_CLIENT = storage.Client()
+        return GCSURI._GCS_CLIENT

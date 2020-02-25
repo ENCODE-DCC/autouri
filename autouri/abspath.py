@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""AbsPath class
-
-Author: Jin Lee (leepc12@gmail.com)
-"""
-
 import hashlib
 import os
 import shutil
-from typeing import Dict
-from .autouri import AutoURI, AutoURIMetadata, logger
+from typing import Dict, Optional
+from .uribase import URIBase, URIMetadata, logger
+from .autouri import AutoURI
 
 
 def init_abspath(
@@ -20,7 +16,7 @@ def init_abspath(
     """
     Helper function to initialize AbsPath class constants
         loc_prefix:
-            Inherited from AutoURI
+            Inherited from URIBase
     """
     if loc_prefix is not None:
         AbsPath.LOC_PREFIX = loc_prefix
@@ -34,11 +30,11 @@ def init_abspath(
         AbsPath.MD5_CALC_CHUNK_SIZE = md5_calc_chunk_size
 
 
-class AbsPath(AutoURI):
+class AbsPath(URIBase):
     """
     Class constants:
         LOC_PREFIX:
-            Path prefix for localization. Inherited from AutoURI class.
+            Path prefix for localization. Inherited from URIBase class.
         MAP_PATH_TO_URL:
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
@@ -58,7 +54,7 @@ class AbsPath(AutoURI):
 
     def __init__(self, uri):
         uri = os.path.expanduser(uri)
-        super().__init__(uri, cls=self.__class__)
+        super().__init__(uri)
 
     @property
     def is_valid(self):
@@ -91,7 +87,7 @@ class AbsPath(AutoURI):
                         for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
                             hash_md5.update(chunk)
                     md5 = hash_md5.hexdigest()
-        return AutoURIMetadata(
+        return URIMetadata(
             exists=ex,
             mtime=mt,
             size=sz,
@@ -131,16 +127,12 @@ class AbsPath(AutoURI):
     def _cp_from(self, src_uri):
         raise NotImplementedError
 
-    def get_mapped_url(self) -> str:
+    def get_mapped_url(self) -> Optional[str]:
         for k, v in AbsPath.MAP_PATH_TO_URL.items():
             if k and self._uri.startswith(k):
                 return self._uri.replace(k, v, 1)
-        raise ValueError('Cannot find a mapping from AbsPath to HTTPURL.')
+        return None
 
     def mkdir_dirname(self):
         os.makedirs(self.get_dirname(), exist_ok=True)
         return
-
-    @classmethod
-    def can_map_to_url(cls) -> bool:
-        return cls.MAP_PATH_TO_URL is not None
