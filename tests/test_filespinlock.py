@@ -9,6 +9,6 @@ import pytest
 
 
 # def test_autouri_read(local_sm_file, sm_file_contents):
-# 	uri = AbsPath(local_sm_file)
-# 	assert uri.read() == sm_file_contents
+#     uri = AbsPath(local_sm_file)
+#     assert uri.read() == sm_file_contents
 
