@@ -2,6 +2,7 @@
 import pytest
 from autouri.s3uri import S3URI
 from autouri.autouri import AutoURI
+from .files import v6_txt_contents
 
 
 @pytest.mark.parametrize('path,expected',[
@@ -35,6 +36,6 @@ def test_s3uri_is_valid(path, expected):
     assert not expected or type(AutoURI(path)) == S3URI
 
 
-def test_s3uri_read(s3_sm_file, sm_file_contents):
-    assert S3URI(s3_sm_file).read() == sm_file_contents
-    assert S3URI(s3_sm_file).read(byte=True) == sm_file_contents.encode()
+def test_s3uri_read(s3_v6_txt):
+    assert S3URI(s3_v6_txt).read() == v6_txt_contents()
+    assert S3URI(s3_v6_txt).read(byte=True) == v6_txt_contents().encode()

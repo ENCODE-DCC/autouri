@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
+import binascii
 import requests
-from binascii import hexlify
 from base64 import b64decode
 from datetime import datetime
 from dateutil.parser import parse as parse_timestamp
+from dateutil.tz import tzutc
 from typing import Optional
-from .uribase import URIBase, URIMetadata, logger
-from .autouri import AutoURI
+from .autouri import URIBase, URIMetadata, AutoURI, logger
 
 
 def init_httpurl(
@@ -18,6 +18,10 @@ def init_httpurl(
     """
     if http_chunk_size is not None:
         HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
+
+
+class ReadOnlyStorageError(Exception):
+    pass
 
 
 class HTTPURL(URIBase):
@@ -53,30 +57,53 @@ class HTTPURL(URIBase):
         return super().basename.split('?', 1)[0]
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        ex, mt, sz, md5 = None, None, None, None, None
-
-        # get header only (make it lower case)
+        ex, mt, sz, md5 = False, None, None, None
+        # get header only
         r = requests.get(
-            url, stream=True, allow_redirects=True,
+            self._uri, stream=True, allow_redirects=True,
             headers=requests.utils.default_headers())
-        r.raise_for_status()
-        h = {k.lower(): v for k, v in r.headers}
+        try:
+            r.raise_for_status()
+            # make keys lower-case
+            h = {k.lower(): v for k, v in r.headers.items()}
+            ex = True
 
-        if 'content-md5' in h:
-            md5 = binascii.hexlify(b64decode(h['content-md5'])).decode()
-        elif 'etag' in h and len(h['etag']) == 32:
-            # if ETag is md5 hexdigest
-            md5 = h['etag']
+            md5_raw = None
+            if 'content-md5' in h:
+                md5_raw = h['content-md5']
+            elif 'x-goog-hash' in h:
+                hashes = h['x-goog-hash'].strip().split(',')
+                for hs in hashes:
+                    if hs.strip().startswith('md5='):
+                        md5_raw = hs.strip().replace('md5=', '', 1)
+            if md5_raw is None and 'etag' in h:
+                md5_raw = h['etag']
+            if md5_raw is not None:
+                md5_raw = md5_raw.strip('"\'')
+                if len(md5_raw) == 32:
+                    md5 = md5_raw
+                else:
+                    md5 = binascii.hexlify(b64decode(md5_raw)).decode()
 
-        if 'content-length' in h:
-            sz = int(h['content-length'])
+            if 'content-length' in h:
+                sz = int(h['content-length'])
+            elif 'x-goog-stored-content-length' in h:
+                sz = int(h['x-goog-stored-content-length'])
 
-        if 'last-modified' in h:
-            utc_t = parse_timestamp(h['last-modified'])
-            mt = (utc_t - datetime(1970, 1, 1)).total_seconds()
+            if 'last-modified' in h:
+                utc_t = parse_timestamp(h['last-modified'])
+            else:
+                utc_t = None
+            if utc_t is not None:              
+                utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())      
+                mt = (utc_t - utc_epoch).total_seconds()
 
-        if md5 is None and not skip_md5:
-            md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
+            if md5 is None and not skip_md5:
+                md5 = self.md5_from_file
+
+        except Exception as e:
+            print(e)
+            pass
 
         return URIMetadata(
             exists=ex,
@@ -96,10 +123,10 @@ class HTTPURL(URIBase):
             return b.decode()
 
     def _write(self, s):
-        raise NotImplementedError('Read-only URI class.')
+        raise ReadOnlyStorageError('Read-only URI class.')
 
     def _rm(self):
-        raise NotImplementedError('Read-only URI class.')
+        raise ReadOnlyStorageError('Read-only URI class.')
 
     def _cp(self, dest_uri):
         """Copy from HTTPURL to 

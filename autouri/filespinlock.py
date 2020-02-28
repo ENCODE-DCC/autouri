@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import time
 from typing import Optional, Union
-from .uribase import logger
-from .autouri import AutoURI
+from .autouri import AutoURI, logger
 
 
 def init_filespinlock(
@@ -80,7 +80,7 @@ class FileSpinLock(object):
                 'remove it manually and try again. {f}'.format(
                     m=self._max_polling,
                     i=self._sec_polling_interval,
-                    f=str(lock)))
+                    f=str(self._lock)))
         else:
             logger.debug('Creating a lock file... {f}'.format(f=str(self._lock)))
             self._lock.write('', no_lock=True)
@@ -93,7 +93,7 @@ class FileSpinLock(object):
             self._lock.rm(no_lock=True)
         else:
             raise Exception('Lock file has been removed by another process. '
-                'Possible race condition. f: {f}'.format(f=str(lock)))
+                'Possible race condition. f: {f}'.format(f=str(self._lock)))
         return
 
     def __get_lock_file_uri(self) -> AutoURI:

@@ -11,8 +11,7 @@ Features:
         - Keeping the original directory structure.
         - Can recursively localize all files in a CSV/TSV/JSON(value only) file.
 """
-from .uribase import URIBase, init_uribase
-from .autouri import AutoURI
+from .autouri import URIBase, AutoURI, init_uribase
 from .abspath import AbsPath, init_abspath
 from .httpurl import HTTPURL, init_httpurl
 from .s3uri import S3URI, init_s3uri

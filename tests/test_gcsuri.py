@@ -2,6 +2,7 @@
 import pytest
 from autouri.gcsuri import GCSURI
 from autouri.autouri import AutoURI
+from .files import v6_txt_contents
 
 
 @pytest.mark.parametrize('path,expected',[
@@ -35,6 +36,6 @@ def test_gcsuri_is_valid(path, expected):
     assert not expected or type(AutoURI(path)) == GCSURI
 
 
-def test_gcsuri_read(gcs_sm_file, sm_file_contents):
-    assert GCSURI(gcs_sm_file).read() == sm_file_contents
-    assert GCSURI(gcs_sm_file).read(byte=True) == sm_file_contents.encode()
+def test_gcsuri_read(gcs_v6_txt):
+    assert GCSURI(gcs_v6_txt).read() == v6_txt_contents()
+    assert GCSURI(gcs_v6_txt).read(byte=True) == v6_txt_contents().encode()

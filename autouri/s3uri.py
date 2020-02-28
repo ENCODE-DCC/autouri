@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-from binascii import hexlify
+import binascii
 from base64 import b64decode
 from datetime import datetime
 from dateutil.parser import parse as parse_timestamp
+from dateutil.tz import tzutc
 from boto3 import client
 from io import BytesIO
 from botocore.errorfactory import ClientError
 from typing import Tuple, Optional
-from .uribase import URIBase, URIMetadata, logger
-from .autouri import AutoURI
+from .autouri import URIBase, URIMetadata, AutoURI, logger
 
 
 def init_s3uri(
@@ -49,34 +49,46 @@ class S3URI(URIBase):
         super().__init__(uri)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        ex, mt, sz, md5 = None, None, None, None
+        ex, mt, sz, md5 = False, None, None, None
 
         cl = S3URI.get_boto3_client()
         bucket, path = self.get_bucket_path()
 
         try:
-            m = cl.head_object(Bucket=bucket, Key=path)
+            m = cl.head_object(Bucket=bucket, Key=path)['ResponseMetadata']['HTTPHeaders']
+            # make keys lower-case
+            h = {k.lower(): v for k, v in m.items()}
+            ex = True
+
+            md5_raw = None
+            if 'content-md5' in h:
+                md5_raw = h['content-md5']
+            elif 'etag' in h:
+                md5_raw = h['etag']
+            if md5_raw is not None:
+                md5_raw = md5_raw.strip('"\'')
+                if len(md5_raw) == 32:
+                    md5 = md5_raw
+                else:
+                    md5 = binascii.hexlify(b64decode(md5_raw)).decode()
+
+            if 'content-length' in h:
+                sz = int(h['content-length'])
+
+            if 'last-modified' in h:
+                utc_t = parse_timestamp(h['last-modified'])
+            else:
+                utc_t = None
+            if utc_t is not None:              
+                utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())      
+                mt = (utc_t - utc_epoch).total_seconds()
+
+            if md5 is None and not skip_md5:
+                md5 = self.md5_from_file
+                # make_md5_file is ignored for S3URI
+
         except ClientError:
-            ex = False
-            return
-        # make it lowercase
-        h = {k.lower(): v for k, v in m}
-
-        if 'content-md5' in h:
-            md5 = binascii.hexlify(b64decode(h['content-md5'])).decode()
-        elif 'etag' in h and len(h['etag']) == 32:
-            # if ETag is md5 hexdigest
-            md5 = h['etag']
-
-        if 'content-length' in h:
-            sz = int(h['content-length'])
-
-        if 'last-modified' in h:
-            utc_t = parse_timestamp(h['last-modified'])
-            mt = (utc_t - datetime(1970, 1, 1)).total_seconds()
-
-        if md5 is None and not skip_md5:
-            md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
+            pass
 
         return URIMetadata(
             exists=ex,

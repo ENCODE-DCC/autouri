@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 import os
 import requests
-from binascii import hexlify
+import binascii
 from base64 import b64decode
 from datetime import (datetime, timedelta)
 from dateutil.parser import parse as parse_timestamp
+from dateutil.tz import tzutc
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
 from subprocess import (
     check_output, check_call, Popen, PIPE, CalledProcessError)
 from typing import Tuple, Optional
-from .uribase import URIBase, URIMetadata, logger
-from .autouri import AutoURI
+from .autouri import URIBase, URIMetadata, AutoURI, logger
 
 
 def init_gcsuri(
@@ -58,32 +58,47 @@ class GCSURI(URIBase):
         super().__init__(uri)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        ex, mt, sz, md5 = None, None, None, None
-        blob = self.get_blob()
+        ex, mt, sz, md5 = False, None, None, None
 
         try:
-            m = cl.head_object(Bucket=bucket, Key=path)
-        except ClientError:
-            ex = False
-            return
-        # make it lowercase
-        h = {k.lower(): v for k, v in m}
+            b = self.get_blob()
+            if b is not None:
+                # make keys lower-case
+                h = {k.lower(): v for k, v in b._properties.items()}
+                ex = True
 
-        if 'content-md5' in h:
-            md5 = binascii.hexlify(b64decode(h['content-md5'])).decode()
-        elif 'etag' in h and len(h['etag']) == 32:
-            # if ETag is md5 hexdigest
-            md5 = h['etag']
+                md5_raw = None
+                if 'md5hash' in h:
+                    md5_raw = h['md5hash']
+                elif 'etag' in h:
+                    md5_raw = h['etag']
+                if md5_raw is not None:
+                    md5_raw = md5_raw.strip('"\'')
+                    if len(md5_raw) == 32:
+                        md5 = md5_raw
+                    else:
+                        md5 = binascii.hexlify(b64decode(md5_raw)).decode()
 
-        if 'content-length' in h:
-            sz = int(h['content-length'])
+                if 'size' in h:
+                    sz = int(h['size'])
 
-        if 'last-modified' in h:
-            utc_t = parse_timestamp(h['last-modified'])
-            mt = (utc_t - datetime(1970, 1, 1)).total_seconds()
+                if 'updated' in h:
+                    utc_t = parse_timestamp(h['updated'])
+                elif 'timecreated' in h:
+                    utc_t = parse_timestamp(h['timecreated'])
+                else:
+                    utc_t = None
+                if utc_t is not None:              
+                    utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())      
+                    mt = (utc_t - utc_epoch).total_seconds()
 
-        if md5 is None and not skip_md5:
-            md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
+                if md5 is None and not skip_md5:
+                    md5 = self.md5_from_file
+                    # make_md5_file is ignored for GCSURI
+                        
+
+        except Exception as e:
+            pass
 
         return URIMetadata(
             exists=ex,
@@ -175,17 +190,17 @@ class GCSURI(URIBase):
 
     def get_blob(self, new=False) -> Blob:
         bucket, path = self.get_bucket_path()
+        cl = GCSURI.get_gcs_client()
         if new:
-            return Blob(path, bucket)
+            return Blob(name=path, bucket=cl.get_bucket(bucket))
         else:
-            cl = GCSURI.get_gcs_client()
             return cl.get_bucket(bucket).get_blob(path)
 
     def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
         bucket, path = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
-        return bucket, path
+        return bucket, path        
 
     def get_presigned_url(self, sec_duration=None, use_cached=False) -> str:
         cache = GCSSURI._CACHED_PRESIGNED_URLS

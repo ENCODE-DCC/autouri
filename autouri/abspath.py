@@ -3,8 +3,7 @@ import hashlib
 import os
 import shutil
 from typing import Dict, Optional
-from .uribase import URIBase, URIMetadata, logger
-from .autouri import AutoURI
+from .autouri import URIBase, URIMetadata, AutoURI, logger
 
 
 def init_abspath(
@@ -50,7 +49,7 @@ class AbsPath(URIBase):
     MD5_CALC_CHUNK_SIZE: int = 4096
 
     _LOC_SUFFIX = '.local'
-    _OS_SEP = os.sep
+    _PATH_SEP = os.sep
 
     def __init__(self, uri):
         uri = os.path.expanduser(uri)
@@ -79,14 +78,12 @@ class AbsPath(URIBase):
             mt = os.path.getmtime(self._uri)
             sz = os.path.getsize(self._uri)
             if not skip_md5:
-                md5 = self.get_md5_from_file(make_md5_file=make_md5_file)
+                md5 = self.md5_from_file
                 if md5 is None:
-                    # expensive md5 calculation
-                    hash_md5 = hashlib.md5()
-                    with open(self._uri, 'rb') as fp:
-                        for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
-                            hash_md5.update(chunk)
-                    md5 = hash_md5.hexdigest()
+                    md5 = self.__calc_md5sum()
+                if make_md5_file:
+                    self.md5_file_uri.write(md5)
+
         return URIMetadata(
             exists=ex,
             mtime=mt,
@@ -134,5 +131,14 @@ class AbsPath(URIBase):
         return None
 
     def mkdir_dirname(self):
-        os.makedirs(self.get_dirname(), exist_ok=True)
+        os.makedirs(self.dirname, exist_ok=True)
         return
+
+    def __calc_md5sum(self):
+        """Expensive md5 calculation
+        """
+        hash_md5 = hashlib.md5()
+        with open(self._uri, 'rb') as fp:
+            for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()

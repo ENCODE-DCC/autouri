@@ -2,6 +2,7 @@
 import pytest
 from autouri.httpurl import HTTPURL
 from autouri.autouri import AutoURI
+from .files import v6_txt_contents
 
 
 @pytest.mark.parametrize('path,expected',[
@@ -35,6 +36,6 @@ def test_httpurl_is_valid(path, expected):
     assert not expected or type(AutoURI(path)) == HTTPURL
 
 
-def test_httpurl_read(url_sm_file, sm_file_contents):
-    assert HTTPURL(url_sm_file).read() == sm_file_contents
-    assert HTTPURL(url_sm_file).read(byte=True) == sm_file_contents.encode()
+def test_httpurl_read(url_v6_txt):
+    assert HTTPURL(url_v6_txt).read() == v6_txt_contents()
+    assert HTTPURL(url_v6_txt).read(byte=True) == v6_txt_contents().encode()
