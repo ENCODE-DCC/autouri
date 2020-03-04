@@ -44,6 +44,7 @@ class S3URI(URIBase):
 
     _LOC_SUFFIX = '.s3'
     _SCHEMES = ('s3://',)
+    _ALLOWED_LOCK_EXCEPTIONS = (ClientError,)
 
     def __init__(self, uri):
         super().__init__(uri)

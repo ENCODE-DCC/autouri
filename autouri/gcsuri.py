@@ -53,6 +53,7 @@ class GCSURI(URIBase):
 
     _LOC_SUFFIX = '.gcs'
     _SCHEMES = ('gs://',)
+    _ALLOWED_LOCK_EXCEPTIONS = tuple()
 
     def __init__(self, uri):
         super().__init__(uri)

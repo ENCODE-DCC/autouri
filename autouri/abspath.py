@@ -2,16 +2,15 @@
 import hashlib
 import os
 import shutil
+from filelock import SoftFileLock
 from typing import Dict, Optional, Union
 from .autouri import URIBase, URIMetadata, AutoURI, logger
-from filelock import SoftFileLock
+from .filespinlock import AutoURIFileLock
 
 
 def init_abspath(
     loc_prefix: Optional[str]=None,
     map_path_to_url: Optional[Dict[str, str]]=None,
-    filelock_max_polling: Optional[int]=None,
-    filelock_sec_polling_interval: Optional[float]=None,
     md5_calc_chunk_size: Optional[int]=None):
     """
     Helper function to initialize AbsPath class constants
@@ -22,10 +21,6 @@ def init_abspath(
         AbsPath.LOC_PREFIX = loc_prefix
     if map_path_to_url is not None:
         AbsPath.MAP_PATH_TO_URL = map_path_to_url
-    if filelock_max_polling is not None:
-        AbsPath.FILELOCK_MAX_POLLING = filelock_max_polling
-    if filelock_sec_polling_interval is not None:
-        AbsPath.FILELOCK_SEC_POLLING_INTERVAL = filelock_sec_polling_interval
     if md5_calc_chunk_size is not None:
         AbsPath.MD5_CALC_CHUNK_SIZE = md5_calc_chunk_size
 
@@ -38,15 +33,9 @@ class AbsPath(URIBase):
         MAP_PATH_TO_URL:
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
-        FILELOCK_MAX_POLLING:
-            Maximum number of lock file polling (way more than default).
-        FILELOCK_SEC_POLLING_INTERVAL:
-            Default polling interval in seconds (way more frequent than default).
 
     """
     MAP_PATH_TO_URL: Dict[str, str] = dict()
-    FILELOCK_MAX_POLLING: int = 18000
-    FILELOCK_SEC_POLLING_INTERVAL: float = 0.1
     MD5_CALC_CHUNK_SIZE: int = 4096
 
     _LOC_SUFFIX = '.local'
@@ -60,16 +49,19 @@ class AbsPath(URIBase):
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    def get_lock(self, no_lock=False) -> Union['FileSpinLock', SoftFileLock]:
-        """Locking mechanism useing FileSpinLock class with much faster polling
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> Union[AutoURIFileLock, SoftFileLock]:
+        """Use filelock.SoftFileLock for AbsPath.
+        Faster polling and stable. It's also platform-independent.
         """
-        from .filespinlock import FileSpinLock
         if no_lock:
-            return FileSpinLock(self, no_lock=no_lock)
+            return super().get_lock(no_lock=no_lock)
         else:
-            u_lock = AutoURI(self._uri + FileSpinLock.LOCK_FILE_EXT)
+            if timeout is None:
+                timeout = URIBase.LOCK_TIMEOUT
+            # create directory and use default poll_interval
+            u_lock = AutoURI(self._uri + URIBase.LOCK_FILE_EXT)
             u_lock.mkdir_dirname()
-            return SoftFileLock(u_lock._uri)
+            return SoftFileLock(u_lock._uri, timeout=timeout)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         """If md5 file doesn't exists then use hashlib.md5() to calculate md5 hash

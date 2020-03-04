@@ -4,7 +4,9 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from filelock import SoftFileLock
 from typing import Any, Callable, Dict, Optional, Tuple, Union
+from .filespinlock import AutoURIFileLock
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
@@ -17,15 +19,24 @@ URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
 
 def init_uribase(
     md5_file_ext: Optional[str]=None,
+    lock_file_ext: Optional[str]=None,
+    lock_timeout: Optional[int]=None,
+    lock_poll_interval: Optional[float]=None,
     loc_recurse_ext_and_fnc: Optional[Dict[str, Callable]]=None):
     """Helper for initializing URIBase class constants
     """
     if md5_file_ext is not None:
-        AutoURI.MD5_FILE_EXT = md5_file_ext
+        URIBase.MD5_FILE_EXT = md5_file_ext
+    if lock_file_ext is not None:
+        URIBase.LOCK_FILE_EXT = lock_file_ext
+    if lock_timeout is not None:
+        URIBase.LOCK_TIMEOUT = lock_timeout
+    if lock_poll_interval is not None:
+        URIBase.LOCK_POLL_INTERVAL = lock_poll_interval
     if loc_recurse_ext_and_fnc is not None:
-        AutoURI.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
+        URIBase.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
     if loc_recursion_depth_limit is not None:
-        AutoURI.LOC_RECURSION_DEPTH_LIMIT = loc_recursion_depth_limit
+        URIBase.LOC_RECURSION_DEPTH_LIMIT = loc_recursion_depth_limit
         pass
 
 
@@ -42,6 +53,12 @@ class URIBase(ABC):
     Class constants:
         MD5_FILE_EXT:
             File extention for md5 (.md5).
+        LOCK_FILE_EXT:
+            Lock file's extention (.lock).
+        LOCK_TIMEOUT:
+            Lock file timeout (-1 for no timeout).
+        LOCK_POLL_INTERVAL:
+            Lock file polling interval in seconds.
         LOC_RECURSE_EXT_AND_FNC:
             Dict of (file extension, function) to recurse localization.
                 e.g. {'.json': recurse_dict, '.tsv': recurse_tsv}
@@ -60,6 +77,9 @@ class URIBase(ABC):
             Suffix after recursive localization if file is modified
     """
     MD5_FILE_EXT: str = '.md5'
+    LOCK_FILE_EXT: str = '.lock'
+    LOCK_TIMEOUT: int = 900
+    LOCK_POLL_INTERVAL: float = 10.0
     LOC_RECURSE_EXT_AND_FNC: Dict[str, Callable] = {
         '.json': recurse_json,
         '.tsv': recurse_tsv,
@@ -71,6 +91,7 @@ class URIBase(ABC):
     _PATH_SEP: str = '/'
     _SCHEMES: Tuple[str, ...] = tuple()
     _LOC_SUFFIX: str = ''
+    _ALLOWED_LOCK_EXCEPTIONS = tuple()
 
     def __init__(self, uri):
         if isinstance(uri, URIBase):
@@ -193,11 +214,19 @@ class URIBase(ABC):
         """
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
-    def get_lock(self, no_lock=False) -> 'FileSpinLock':
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> Union[AutoURIFileLock, SoftFileLock]:
         """Default locking mechanism using FileSpinLock class
         """
-        from .filespinlock import FileSpinLock
-        return FileSpinLock(self, no_lock=no_lock)
+        if timeout is None:
+            timeout = URIBase.LOCK_TIMEOUT
+        if poll_interval is None:
+            poll_interval = URIBase.LOCK_POLL_INTERVAL
+        return AutoURIFileLock(
+            self._uri + AutoURI.LOCK_FILE_EXT,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            no_lock=no_lock,
+            allowed_exceptions=self.__class__.get_allowed_lock_exceptions())
 
     def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
@@ -356,6 +385,12 @@ class URIBase(ABC):
         Tailing slash will be removed.
         """
         return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
+
+    @classmethod
+    def get_allowed_lock_exceptions(cls) -> Tuple[Exception, ...]:
+        """Separator for directory.
+        """
+        return cls._ALLOWED_LOCK_EXCEPTIONS
 
     @classmethod
     def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None, depth=0) -> Tuple[str, bool]:
