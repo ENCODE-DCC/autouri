@@ -5,13 +5,9 @@ import hashlib
 import os
 import pytest
 from .files import (
-    j1_json_contents,
-    v41_txt_contents,
-    v421_tsv_contents,
-    v5_csv_contents,
     v6_txt_contents,
     j1_json,
-    v41_txt,
+    v41_json,
     v421_tsv,
     v5_csv,
     v6_txt,
@@ -79,9 +75,40 @@ def gcs_test_path(gcs_root, ci_prefix):
 
 
 @pytest.fixture(scope='session')
+def gcs_test_path_self_ref(gcs_test_path):
+    return '{gcs_test_path}/self_ref'.format(
+        gcs_test_path=gcs_test_path)
+
+
+@pytest.fixture(scope='session')
 def url_test_path(url_root, ci_prefix):
     return '{url_root}/{ci_prefix}'.format(
         url_root=url_root, ci_prefix=ci_prefix)
+
+
+@pytest.fixture(scope='session')
+def mixed_local_test_path(local_test_path):
+    d = os.path.join(local_test_path, 'mixed')
+    os.makedirs(d, exist_ok=True)
+    return d
+
+
+@pytest.fixture(scope='session')
+def mixed_s3_test_path(s3_test_path):
+    return '{s3_test_path}/mixed'.format(
+        s3_test_path=s3_test_path)
+
+
+@pytest.fixture(scope='session')
+def mixed_gcs_test_path(gcs_test_path):
+    return '{gcs_test_path}/mixed'.format(
+        gcs_test_path=gcs_test_path)
+
+
+@pytest.fixture(scope='session')
+def mixed_url_test_path(url_test_path):
+    return '{url_test_path}/mixed'.format(
+        url_test_path=url_test_path)
 
 
 @pytest.fixture(scope="session")
@@ -90,8 +117,8 @@ def local_j1_json(local_test_path):
 
 
 @pytest.fixture(scope="session")
-def local_v41_txt(local_test_path):
-    return v41_txt(local_test_path, make=True)
+def local_v41_json(local_test_path):
+    return v41_json(local_test_path, make=True)
 
 
 @pytest.fixture(scope="session")
@@ -110,13 +137,107 @@ def local_v6_txt(local_test_path):
 
 
 @pytest.fixture(scope="session")
+def s3_j1_json(s3_test_path):
+    return j1_json(s3_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def s3_v41_json(s3_test_path):
+    return v41_json(s3_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def s3_v421_tsv(s3_test_path):
+    return v421_tsv(s3_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def s3_v5_csv(s3_test_path):
+    return v5_csv(s3_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
 def s3_v6_txt(s3_test_path):
     return v6_txt(s3_test_path, make=True)
 
 
 @pytest.fixture(scope="session")
+def gcs_j1_json(gcs_test_path):
+    return j1_json(gcs_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v41_json(gcs_test_path):
+    return v41_json(gcs_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v421_tsv(gcs_test_path):
+    return v421_tsv(gcs_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v5_csv(gcs_test_path):
+    return v5_csv(gcs_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
 def gcs_v6_txt(gcs_test_path):
     return v6_txt(gcs_test_path, make=True)
+
+
+
+@pytest.fixture(scope="session")
+def gcs_j1_json_self_ref(gcs_test_path_self_ref):
+    return j1_json(gcs_test_path_self_ref, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v41_json_self_ref(gcs_test_path_self_ref):
+    return v41_json(gcs_test_path_self_ref, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v421_tsv_self_ref(gcs_test_path_self_ref):
+    return v421_tsv(gcs_test_path_self_ref, make=True, make_link_to_j1_json=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v5_csv_self_ref(gcs_test_path_self_ref):
+    return v5_csv(gcs_test_path_self_ref, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v6_txt_self_ref(gcs_test_path_self_ref):
+    return v6_txt(gcs_test_path_self_ref, make=True)
+
+
+@pytest.fixture(scope="session")
+def url_j1_json(gcs_j1_json, url_test_path):
+    """URL is read-only. So this is a link to the actual file on GCS.
+    """
+    return j1_json(url_test_path, make=False)
+
+
+@pytest.fixture(scope="session")
+def url_v41_json(gcs_v41_json, url_test_path):
+    """URL is read-only. So this is a link to the actual file on GCS.
+    """
+    return v41_json(url_test_path, make=False)
+
+
+@pytest.fixture(scope="session")
+def url_v421_tsv(gcs_v421_tsv, url_test_path):
+    """URL is read-only. So this is a link to the actual file on GCS.
+    """
+    return v421_tsv(url_test_path, make=False)
+
+
+@pytest.fixture(scope="session")
+def url_v5_csv(gcs_v5_csv, url_test_path):
+    """URL is read-only. So this is a link to the actual file on GCS.
+    """
+    return v5_csv(url_test_path, make=False)
 
 
 @pytest.fixture(scope="session")
@@ -127,8 +248,45 @@ def url_v6_txt(gcs_v6_txt, url_test_path):
 
 
 @pytest.fixture(scope="session")
-def v6_txt_md5_hash():
-    return hashlib.md5(v6_txt_contents().encode()).hexdigest()
+def mixed_j1_json(
+    mixed_local_test_path,
+    mixed_s3_test_path,
+    mixed_gcs_test_path,
+    mixed_url_test_path):
+    return j1_json(mixed_gcs_test_path, make=True,
+        prefix_v41=mixed_url_test_path,
+        prefix_v421=mixed_s3_test_path,
+        prefix_v5=mixed_local_test_path)
+
+
+@pytest.fixture(scope="session")
+def mixed_v41_json(mixed_gcs_test_path, mixed_url_test_path):
+    """Actual file is created on GCS then it will have a correspondig URL.
+    """
+    return v41_json(mixed_gcs_test_path, make=True)
+
+
+@pytest.fixture(scope="session")
+def mixed_v421_tsv(
+    mixed_s3_test_path,
+    mixed_gcs_test_path,
+    mixed_local_test_path):
+    return v421_tsv(mixed_s3_test_path, make=True,
+        prefix_v5=mixed_local_test_path,
+        prefix_v1=mixed_gcs_test_path)
+
+
+@pytest.fixture(scope="session")
+def mixed_v5_csv(
+    mixed_local_test_path,
+    mixed_s3_test_path):
+    return v5_csv(mixed_local_test_path, make=True,
+        prefix_v6=mixed_s3_test_path)
+
+
+@pytest.fixture(scope="session")
+def mixed_v6_txt(mixed_s3_test_path):
+    return v6_txt(mixed_s3_test_path, make=True)
 
 
 @pytest.fixture(scope="session")
@@ -136,66 +294,6 @@ def v6_txt_size():
     return len(v6_txt_contents())
 
 
-# @pytest.fixture(scope='session')
-# def url_sm_file():
-#     """Small file on public GC bucket.
-#     """
-#     return 'https://storage.googleapis.com/encode-test-autouri/data/sm_file.txt'
-
-
-# @pytest.fixture(scope='session')
-# def s3_sm_file():
-#     return 's3://encode-test-autouri/data/sm_file.txt'
-
-
-# @pytest.fixture(scope='session')
-# def gcs_sm_file():
-#     return 'gs://encode-test-autouri/data/sm_file.txt'
-
-
-# @pytest.fixture(scope='session')
-# def url_lg_file():
-#     """Large file on public GC bucket.
-#     """
-#     return 'https://storage.googleapis.com/encode-test-autouri/data/lg_file.txt.gz'
-
-
-# @pytest.fixture(scope='session')
-# def s3_lg_file():
-#     return 's3://encode-test-autouri/data/lg_file.txt.gz'
-
-
-# @pytest.fixture(scope='session')
-# def gcs_lg_file():
-#     return 'gs://encode-test-autouri/data/lg_file.txt.gz'
-
-
-# @pytest.fixture(scope='session')
-# def sm_file_contents(url_sm_file):    
-#     return HTTPURL(url_sm_file).read()
-
-
-# @pytest.fixture(scope='session')
-# def cache_dirs(tmpdir_factory, ci_prefix):
-#     local_cache = tmpdir_factory.mktemp(ci_prefix).mkdir('cache').realpath()
-#     s3_cache = 's3://encode-pipeline-test-runs/test_autouri/{ci_prefix}/cache'.format(
-#         ci_prefix=ci_prefix)
-#     gcs_cache = 'gs://encode-pipeline-test-runs/test_autouri/{ci_prefix}/cache'.format(
-#         ci_prefix=ci_prefix)
-#     init_abspath(loc_prefix=local_cache)
-#     init_s3uri(loc_prefix=s3_cache)
-#     init_gcsuri(loc_prefix=gcs_cache)
-#     return local_cache, s3_cache, gcs_cache
-
-
-# @pytest.fixture(scope='session')
-# def local_test_dir(cache_dirs, tmpdir_factory, ci_prefix):
-#     return tmpdir_factory.mktemp(ci_prefix).mkdir('data').realpath()
-
-
-# @pytest.fixture(scope='session')
-# def local_sm_file(sm_file_contents, local_test_dir):
-#     uri = AbsPath(os.path.join(local_test_dir, 'sm_file.txt'))
-#     uri.write(sm_file_contents)
-#     return uri.uri
-
+@pytest.fixture(scope="session")
+def v6_txt_md5_hash():
+    return hashlib.md5(v6_txt_contents().encode()).hexdigest()

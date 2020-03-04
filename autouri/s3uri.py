@@ -147,9 +147,8 @@ class S3URI(URIBase):
         elif isinstance(dest_uri, AbsPath):
             dest_uri.mkdir_dirname()
             with open(dest_uri._uri, 'wb') as fp:
-                cl.download_file(Bucket=bucket, Key=path, Fileobj=fp)
+                cl.download_fileobj(Bucket=bucket, Key=path, Fileobj=fp)
             return True
-
         return False
 
     def _cp_from(self, src_uri):
@@ -159,6 +158,7 @@ class S3URI(URIBase):
         """
         from .abspath import AbsPath
 
+        src_uri = AutoURI(src_uri)
         cl = S3URI.get_boto3_client()
         bucket, path = self.get_bucket_path()
 
@@ -184,8 +184,7 @@ class S3URI(URIBase):
                     Bucket=bucket,
                     Key=path)
             return True
-
-        raise NotImplementedError
+        return False
 
     def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.

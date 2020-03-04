@@ -14,6 +14,8 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
             Callback function for recursion.
             This function must return a tuple of (val, modified)
             where modified is Boolean
+        depth:
+            Recursion depth limit to prevent self reference
 
     Returns:
         new_contents:
@@ -24,15 +26,16 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
     def recurse_dict(d, fnc, d_parent=None, d_parent_key=None,
                      lst=None, lst_idx=None, modified=False):
         """Recurse dict with a callback function.
+        This function modifies mutable d.
         """
         if isinstance(d, dict):
             for k, v in d.items():
                 modified |= recurse_dict(v, fnc, d_parent=d,
-                                        d_parent_key=k, modified=modified)
+                                         d_parent_key=k, modified=modified)
         elif isinstance(d, list):
             for i, v in enumerate(d):
                 modified |= recurse_dict(v, fnc, lst=d,
-                                        lst_idx=i, modified=modified)
+                                         slst_idx=i, modified=modified)
         elif isinstance(d, str):
             assert(d_parent is not None or lst is not None)
             new_val, modified_ = fnc(d)
@@ -45,7 +48,7 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
                     lst[lst_idx] = new_val
                 else:
                     raise ValueError('Recursion failed.')
-            return modified
+        return modified
 
     d = json.loads(contents)
     # d is modified inside of recurse_dict
@@ -76,7 +79,7 @@ def recurse_tsv(contents: str, fnc: Callable, delim: str='\t') -> Tuple[str, boo
     for line in contents.split('\n'):
         new_values = []
         for v in line.split(delim):
-            new_val, modified = fnc(v)
+            new_val, modified_ = fnc(v)
             modified |= modified_
             if modified_:
                 new_values.append(new_val)

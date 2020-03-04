@@ -115,8 +115,6 @@ class GCSURI(URIBase):
 
     def _write(self, s):
         blob = self.get_blob(new=True)
-        # if not isinstance(s, str):
-        #     s = s.decode()
         blob.upload_from_string(s)
         return
 
@@ -137,22 +135,22 @@ class GCSURI(URIBase):
         dest_uri = AutoURI(dest_uri)
 
         if isinstance(dest_uri, (GCSURI, AbsPath)):            
-            src_bucket, src_path = self.get_bucket_path()
-            src_blob = src_bucket.get_blob(src_path)
+            src_blob = self.get_blob()
 
             if isinstance(dest_uri, GCSURI):
                 dest_bucket, dest_path = dest_uri.get_bucket_path()
-                return src_bucket.copy_blob(src_blob, dest_bucket, dest_path) is not None
+                src_bucket.copy_blob(src_blob, dest_bucket, dest_path)
+                return True
 
             elif isinstance(dest_uri, AbsPath):
                 dest_uri.mkdir_dirname()
-                return src_blob.download_to_filename(dest_uri.get_uri()) is not None
+                src_blob.download_to_filename(dest_uri._uri)
+                return True
 
         elif isinstance(dest_uri, S3URI):
             rc = check_call(['gsutil', '-q', 'cp', self._uri, dest_uri._uri])
             return rc == 0
-
-        return dest_uri._cp_from(self)
+        return False
 
     def _cp_from(self, src_uri):
         """Copy to GCSURI from
@@ -167,7 +165,8 @@ class GCSURI(URIBase):
 
         if isinstance(src_uri, AbsPath):
             blob = self.get_blob(new=True)
-            return blob.upload_from_filename(src_uri.get_uri()) is not None
+            blob.upload_from_filename(src_uri._uri)
+            return True
 
         elif isinstance(src_uri, S3URI):
             rc = check_call(['gsutil', '-q', 'cp', src_uri._uri, self._uri])
@@ -184,9 +183,9 @@ class GCSURI(URIBase):
                     fp.write(chunk)
             blob = self.get_blob(new=True)
             with open(b, 'rb') as fp:
-                return blob.upload_from_file(fp) is not None
-
-        raise NotImplementedError
+                blob.upload_from_file(fp)
+            return True
+        return False
 
     def get_blob(self, new=False) -> Blob:
         bucket, path = self.get_bucket_path()

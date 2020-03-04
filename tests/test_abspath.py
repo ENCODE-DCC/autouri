@@ -7,8 +7,12 @@ from autouri.abspath import AbsPath, init_abspath
 from autouri.autouri import AutoURI, URIBase
 from autouri.filespinlock import FileSpinLock
 from autouri.httpurl import ReadOnlyStorageError
-from .files import v6_txt_contents, common_paths
-
+from autouri.autouri import AutoURIRecursionError
+from .files import (
+    v6_txt_contents,
+    common_paths,
+    recurse_raise_if_uri_not_exist
+)
 
 
 @pytest.mark.parametrize('path', common_paths())
@@ -117,21 +121,41 @@ def test_abspath_md5_file_uri(local_v6_txt):
 
 
 def test_abspath_lock(local_v6_txt) -> 'FileSpinLock':
-    assert isinstance(AbsPath(local_v6_txt).lock, FileSpinLock)
+    """FileSpinLock will be tested thoroughly in test_filespinlock.py.
+    Here we just test if it creates a correct FileSpinLock class.
+    """
+    assert isinstance(AbsPath(local_v6_txt).get_lock(), FileSpinLock)
+    assert isinstance(AbsPath(local_v6_txt).get_lock(no_lock=True), FileSpinLock)
 
 
 @pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_abspath_cp(
     local_v6_txt,
+    local_test_path,
     s3_test_path,
     gcs_test_path,
     url_test_path) -> 'AutoURI':
-    """Test on url_test_path will fail as intended since it's a read-only storage
+    """Test copying local_v6_txt to the following destination storages:
+        local_test_path: local -> local
+        s3_test_path: local -> s3
+        gcs_test_path: local -> gcs
+        url_test_path: local -> url
+            This will fail as intended since URL is read-only.
+
+    Parameters to be tested:
+        no_lock:
+            Copy with no locking mechanism. There is no way to test this thoroughly here.
+            This will be tested with multiple threads later in test_rece_cond.py.
+        no_checksum:
+            Don't check md5-hash/size/mtime to skip copying (even if file already exists on destination).
+        make_md5_file:
+            Make md5 file on destination only when it's REQUIRED.
+            It's required only if we need to compare md5 hash of source and target.
     """
     u = AbsPath(local_v6_txt)
     basename = os.path.basename(local_v6_txt)
 
-    for test_path in (s3_test_path, gcs_test_path, url_test_path):
+    for test_path in (local_test_path, s3_test_path, gcs_test_path, url_test_path):
         u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -155,9 +179,10 @@ def test_abspath_cp(
         # copy without checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
+        time.sleep(1)
         _, ret = u.cp(u_dest, no_checksum=True)
         # compare new mtime vs old mtime
-        # new time should be larger if it's overwritten as intended
+        # new time should be larger if it's overwritten as intended        
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
 
         # copy with checksum when target exists
@@ -169,7 +194,7 @@ def test_abspath_cp(
         assert u_dest.mtime == m_dest.mtime and u.read() == u_dest.read() and ret == 1
 
         # make_md5_file works only when it's required
-        # i.e. need to compare md5 has of src vs target
+        # i.e. when we need to compare md5 hash of src vs target
         # so target must exist prior to test it
         assert u_dest.exists
         # delete md5 file if exists
@@ -282,8 +307,105 @@ def test_abspath_get_loc_prefix() -> str:
     assert AbsPath.get_loc_prefix() == ''
 
 
-# def test_abspath_localize(src_uri, make_md5_file=False, recursive=False) -> Tuple[str, bool]:
-#     pass
-#     # assert AbsPath.localize() == 
 
+def test_abspath_localize(
+        local_test_path,
+        local_j1_json, local_v41_json, local_v421_tsv, local_v5_csv, local_v6_txt,
+        s3_j1_json, s3_v41_json, s3_v421_tsv, s3_v5_csv, s3_v6_txt,
+        gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt,
+        url_j1_json, url_v41_json, url_v421_tsv, url_v5_csv, url_v6_txt
+    ) -> Tuple[str, bool]:
+    """Recursive localization is supported for the following file extensions:
+        .json:
+            Files defined only in values (not keys) can be recursively localized.
+        .tsv/.csv: 
+            Files defined in all values can be recursively localized.
 
+    This function will test localizing j1.json file on each remote storage.
+    This JSON file has file paths including .tsv and .csv, which also include
+    other files in its contents.
+    Therefore, when the recursive flag is on, all files in these JSON, TSV, CSV
+    files should be localized recursively with correct file names
+    (controlled by cls.loc_prefix and cls.loc_suffix).
+
+    Filenaming for (recursive) localization:
+        cls.loc_prefix + remote_file_path_without_scheme + cls.loc_suffix (for recursvely only)
+
+    For example,
+    s3://test-bucket/j1.json has some file paths on s3://.
+
+    With recursive localization, all these files must be localized on /tmp/user/loc_prefix/ with
+    a correct directory structure (keeping original structure on source: i.e. bucket name, path)
+    and the name of the JSON file should be j1.local.json since contents of this file should be
+    modified to point to localized files in it. This is recursively done for all files in it too.
+
+    Without recursive localization, autouri doesn't look inside that JSON file and just localize
+    the file itself alone on /tmp/user/loc_prefix/ while keeping the same filename j1.local.json.
+
+    Test localizing on a local storage from the following remote storages:
+        local_test_path: local -> local
+        s3_test_path: s3 -> local
+        gcs_test_path: gcs -> local
+        url_test_path: url -> local
+
+    Parameters to be tested:
+        make_md5_file:
+            Make md5 file on destination only when it's REQUIRED.
+            It's required only if we need to compare md5 hash of source and target.
+            This is already tested cp and it's actually needed for local storage.
+            Cloud URIs will provide md5 hash info in their metadata so md5 file
+            is not required and hence will not be created even with this flag on.
+        recursive:
+            j1.json
+    """
+    loc_prefix = os.path.join(local_test_path, 'test_abspath_localize')    
+
+    for j1_json in (local_j1_json,):
+        # localization from local storage
+        u_j1_json = AutoURI(j1_json)
+        loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
+
+        # for localization both with or without recursive
+        # nothing should be localized actually
+        # since they are already on a local storage
+        # so loc_prefix directory itself shouldn't be created
+        loc_uri, localized = AbsPath.localize(
+            u_j1_json,
+            recursive=False,
+            loc_prefix=loc_prefix_)
+        assert loc_uri == u_j1_json.uri and not localized
+        assert not os.path.exists(loc_prefix)
+
+        loc_uri, localized = AbsPath.localize(
+            u_j1_json,
+            recursive=True,
+            loc_prefix=loc_prefix_)
+        assert loc_uri == u_j1_json.uri and not localized
+        assert not os.path.exists(loc_prefix)
+        # check if all URIs defeind in localized JSON file exist
+        recurse_raise_if_uri_not_exist(loc_uri)
+
+    # localization from remote storages
+    for j1_json in (gcs_j1_json,): # s3_j1_json, url_j1_json):
+        u_j1_json = AutoURI(j1_json)
+        loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
+
+        loc_uri, localized = AbsPath.localize(
+            u_j1_json,
+            recursive=False,
+            loc_prefix=loc_prefix_)
+        assert loc_uri == os.path.join(
+            loc_prefix_, u_j1_json.loc_dirname,
+            u_j1_json.basename)
+        assert localized and os.path.exists(loc_uri)
+
+        loc_uri, localized = AbsPath.localize(
+            u_j1_json,
+            recursive=True,
+            loc_prefix=loc_prefix_)
+        assert loc_uri == os.path.join(
+            loc_prefix_, u_j1_json.loc_dirname,
+            u_j1_json.basename_wo_ext + AbsPath.get_loc_suffix() + u_j1_json.ext)
+        assert localized and os.path.exists(loc_uri)
+        # check if all URIs defeind in localized JSON file exist
+        recurse_raise_if_uri_not_exist(loc_uri)

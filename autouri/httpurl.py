@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import binascii
+import hashlib
 import requests
 from base64 import b64decode
 from datetime import datetime
@@ -132,24 +133,24 @@ class HTTPURL(URIBase):
         """Copy from HTTPURL to 
             AbsPath
         """
+        from autouri.abspath import AbsPath
         dest_uri = AutoURI(dest_uri)
 
         if isinstance(dest_uri, AbsPath):
             r = requests.get(
-                url, stream=True, allow_redirects=True,
+                self._uri, stream=True, allow_redirects=True,
                 headers=requests.utils.default_headers())
             r.raise_for_status()
             dest_uri.mkdir_dirname()
-            with open(dest_uri.get_uri(), 'wb') as f:
+            with open(dest_uri._uri, 'wb') as f:
                 for chunk in r.iter_content(chunk_size=HTTPURL.HTTP_CHUNK_SIZE): 
                     if chunk:
                         f.write(chunk)
             return True
-
         return False
 
     def _cp_from(self, src_uri):
-        raise NotImplementedError('Read-only URI class.')
+        raise ReadOnlyStorageError('Read-only URI class.')
 
     @staticmethod
     def get_http_chunk_size() -> int:

@@ -1,100 +1,151 @@
 #!/usr/bin/env python3
 """Files for testing
 
-To test recursive localization.
-Refer to j1_json_contents for structure.
-    j1_json,
-    v41_txt,
-    v421_tsv,
-    v5_csv,
-    v6_txt,
+Use v6_txt to test basic/simple methods of AutoURI.
 
-To test member functions in class
-    v6_txt,
+Use j1_json to test recursive localization of a file containing file paths in it.
+j1_json has TSV/CSV files, which can also be recursively localized.
 
+See j1_json_contents() for its detailed structure.
+    j1_json
+        v41_json
+        v421_tsv
+            v5_csv
+                v6_txt
+            v6_txt
+            v1_json (optionally to check self-reference)
+        v5_csv
+            v6_txt
 """
 from autouri.autouri import AutoURI
+from autouri.loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
-def j1_json_contents(prefix, loc_suffix=''):
-    return '''{
+def j1_json_contents(prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix=''):
+    if prefix_v41 is None:
+        prefix_v41 = prefix
+    if prefix_v421 is None:
+        prefix_v421 = prefix
+    if prefix_v5 is None:
+        prefix_v5 = prefix
+    return '''{{
         "k1": "v1",
         "k2": 1,
         "k3": 2.2,
-        "k4": {
-            "k41": "{prefix}/v41.txt",
-            "k42": {
-                "k421": "{prefix}/deeper/v421{loc_suffix}.tsv"
-            },
+        "k4": {{
+            "k41": "{prefix_v41}/v41.json",
+            "k42": {{
+                "k421": "{prefix_v421}/deeper/v421{loc_suffix}.tsv"
+            }},
             "k43": null
-        },
-        "k5": "{prefix}/even/deeper/v5{loc_suffix}.csv"
-        }
-    '''.format(prefix=prefix)
+        }},
+        "k5": "{prefix_v5}/even/deeper/v5{loc_suffix}.csv"
+    }}
+    '''.format(        
+        prefix_v41=prefix_v41,
+        prefix_v421=prefix_v421,
+        prefix_v5=prefix_v5,
+        loc_suffix=loc_suffix)
 
 
-def v41_txt_contents():
-    return 'v41: Hello World'
+def v41_json_contents():
+    """JSON without any files defined in it.
+    """
+    return '{ "k1": "v1" }'
 
 
-def v421_tsv_contents(prefix, loc_suffix=''):
-    return '\n'.join([
+def v421_tsv_contents(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, loc_suffix='', make_link_to_j1_json=False):
+    """
+    Args:
+        make_link_to_j1_json:
+            Link j1.json in this TSV file to to intentionally make a self reference
+            , and hence an infinite loop while recursive localization
+            j1.json -> v421.tsv -> j1.json -> ...
+    """
+    if prefix_v5 is None:
+        prefix_v5 = prefix
+    if prefix_v1 is None:
+        prefix_v1 = prefix
+    if prefix_v6 is None:
+        prefix_v6 = prefix
+    arr = [
         'k1\tv1',
         'k2\t1',
         'k3\t2.2',
         'k4\tnot/absolute/path',
-        'k5\t{prefix}/even/deeper/v5{loc_suffix}.csv',
-        'k6\t{prefix}/v6.txt'.format(prefix=prefix)
-    ])
+        'k5\t{prefix_v5}/even/deeper/v5{loc_suffix}.csv',
+        'k6\t{prefix_v6}/v6.txt'
+    ]
+    if make_link_to_j1_json:
+        arr.append('k7\t{prefix_v1}/j1.json')
+    s = '\n'.join(arr)
+    return s.format(
+        prefix_v5=prefix_v5,
+        prefix_v1=prefix_v1,
+        prefix_v6=prefix_v6,
+        loc_suffix=loc_suffix)
 
 
-def v5_csv_contents(prefix):
-    return '\n'.join([
+def v5_csv_contents(prefix, prefix_v6=None):
+    if prefix_v6 is None:
+        prefix_v6 = prefix
+    s = '\n'.join([
         'k1,v1',
         'k2,1',
         'k3,2.2',
         'k4,not/absolute/path',
         'k5,s33://not-valid-bucket-address',
-        'k6,{prefix}/v6.txt'.format(prefix=prefix)
+        'k6,{prefix_v6}/v6.txt'
     ])
+    return s.format(prefix_v6=prefix_v6)
 
 
 def v6_txt_contents():
     return 'v6: Hello World'
 
 
-def j1_json(prefix, loc_suffix='', make=False):
-    u = '{prefix}/j1.json'.format(
+def j1_json(prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix='', make=False):
+    u = '{prefix}/j1{loc_suffix}.json'.format(
         prefix=prefix, loc_suffix=loc_suffix)
     if make:
         AutoURI(u).write(j1_json_contents(
-            prefix))
+            prefix=prefix,
+            prefix_v41=prefix_v41,
+            prefix_v421=prefix_v421,
+            prefix_v5=prefix_v5,
+            loc_suffix=loc_suffix))
     return u
 
 
-def v41_txt(prefix, loc_suffix='', make=False):
-    u = '{prefix}/v41.txt'.format(
-        prefix=prefix, loc_suffix=loc_suffix)
+def v41_json(prefix, make=False):
+    u = '{prefix}/v41.json'.format(
+        prefix=prefix)
     if make:
-        AutoURI(u).write(v41_txt_contents())
-    return u   
+        AutoURI(u).write(v41_json_contents())
+    return u
 
 
-def v421_tsv(prefix, loc_suffix='', make=False):
-    u = '{prefix}/deeper/v421.tsv'.format(
+def v421_tsv(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, loc_suffix='', make=False, make_link_to_j1_json=False):
+    u = '{prefix}/deeper/v421{loc_suffix}.tsv'.format(
         prefix=prefix, loc_suffix=loc_suffix)
     if make:
         AutoURI(u).write(v421_tsv_contents(
-            prefix))
+            prefix=prefix,
+            prefix_v5=prefix_v5,
+            prefix_v1=prefix_v1,
+            prefix_v6=prefix_v6,
+            loc_suffix=loc_suffix,
+            make_link_to_j1_json=make_link_to_j1_json))
     return u
 
 
-def v5_csv(prefix, make=False):
+def v5_csv(prefix, prefix_v6=None, make=False):
     u = '{prefix}/even/deeper/v5.csv'.format(
         prefix=prefix)
     if make:
         AutoURI(u).write(v5_csv_contents(
-            prefix))
+            prefix=prefix,
+            prefix_v6=prefix_v6))
     return u
 
 
@@ -131,3 +182,18 @@ def common_paths():
         'gs:\\hello-world\\not-ok.txt',
         '!@#:;$@!#$F',
     ]
+
+
+def recurse_raise_if_uri_not_exist(uri):
+    uri = AutoURI(uri)
+    if uri.is_valid:
+        if uri.exists:
+            if uri.ext == '.json':
+                recurse_json(uri.read(), recurse_raise_if_uri_not_exist)
+            elif uri.ext == '.tsv':
+                recurse_tsv(uri.read(), recurse_raise_if_uri_not_exist)
+            elif uri.ext == '.csv':
+                recurse_csv(uri.read(), recurse_raise_if_uri_not_exist)
+        else:
+            raise Exception('URI is a valid path but does not exist.')
+    return None, False

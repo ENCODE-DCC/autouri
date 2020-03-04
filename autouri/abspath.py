@@ -2,8 +2,9 @@
 import hashlib
 import os
 import shutil
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from .autouri import URIBase, URIMetadata, AutoURI, logger
+from filelock import SoftFileLock
 
 
 def init_abspath(
@@ -59,15 +60,16 @@ class AbsPath(URIBase):
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    @property
-    def lock(self):
+    def get_lock(self, no_lock=False) -> Union['FileSpinLock', SoftFileLock]:
         """Locking mechanism useing FileSpinLock class with much faster polling
         """
         from .filespinlock import FileSpinLock
-        return FileSpinLock(
-            self,
-            max_polling=AbsPath.FILELOCK_MAX_POLLING,
-            sec_polling_interval=AbsPath.FILELOCK_SEC_POLLING_INTERVAL)
+        if no_lock:
+            return FileSpinLock(self, no_lock=no_lock)
+        else:
+            u_lock = AutoURI(self._uri + FileSpinLock.LOCK_FILE_EXT)
+            u_lock.mkdir_dirname()
+            return SoftFileLock(u_lock._uri)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         """If md5 file doesn't exists then use hashlib.md5() to calculate md5 hash
@@ -99,6 +101,7 @@ class AbsPath(URIBase):
             return fp.read()
 
     def _write(self, s):
+        self.mkdir_dirname()
         if isinstance(s, str):
             param = 'w'
         else:
@@ -122,7 +125,7 @@ class AbsPath(URIBase):
         return False
 
     def _cp_from(self, src_uri):
-        raise NotImplementedError
+        return False
 
     def get_mapped_url(self) -> Optional[str]:
         for k, v in AbsPath.MAP_PATH_TO_URL.items():

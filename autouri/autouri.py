@@ -24,6 +24,13 @@ def init_uribase(
         AutoURI.MD5_FILE_EXT = md5_file_ext
     if loc_recurse_ext_and_fnc is not None:
         AutoURI.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
+    if loc_recursion_depth_limit is not None:
+        AutoURI.LOC_RECURSION_DEPTH_LIMIT = loc_recursion_depth_limit
+        pass
+
+
+class AutoURIRecursionError(RuntimeError):
+    pass
 
 
 class URIBase(ABC):
@@ -38,6 +45,8 @@ class URIBase(ABC):
         LOC_RECURSE_EXT_AND_FNC:
             Dict of (file extension, function) to recurse localization.
                 e.g. {'.json': recurse_dict, '.tsv': recurse_tsv}
+        LOC_RECURSION_DEPTH_LIMIT:
+            To detect direct/indirect self reference.
         LOC_PREFIX:
             Cache path prefix for localization on this class' storage.
             This should be None for this base class but must be specified for subclasses.
@@ -56,6 +65,7 @@ class URIBase(ABC):
         '.tsv': recurse_tsv,
         '.csv': recurse_csv
     }
+    LOC_RECURSION_DEPTH_LIMIT: int = 10
     LOC_PREFIX: str = ''
 
     _PATH_SEP: str = '/'
@@ -183,12 +193,11 @@ class URIBase(ABC):
         """
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
-    @property
-    def lock(self) -> 'FileSpinLock':
+    def get_lock(self, no_lock=False) -> 'FileSpinLock':
         """Default locking mechanism using FileSpinLock class
         """
         from .filespinlock import FileSpinLock
-        return FileSpinLock(self)
+        return FileSpinLock(self, no_lock=no_lock)
 
     def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
@@ -222,65 +231,44 @@ class URIBase(ABC):
         """
         d = AutoURI(dest_uri)
 
-        if not no_checksum:
-            # checksum (by md5, size, mdate)
-            m_dest = d.get_metadata(make_md5_file=make_md5_file)
-            if m_dest.exists:
-                m_src = self.get_metadata()
+        with d.get_lock(no_lock=no_lock) as lock:
+            if not no_checksum:
+                # checksum (by md5, size, mdate)
+                m_dest = d.get_metadata(make_md5_file=make_md5_file)
+                if m_dest.exists:
+                    m_src = self.get_metadata()
 
-                md5_matched = m_src.md5 is not None and m_dest.md5 is not None and \
-                    m_src.md5 == m_dest.md5
-                if md5_matched:
-                    return d, 1
+                    md5_matched = m_src.md5 is not None and m_dest.md5 is not None and \
+                        m_src.md5 == m_dest.md5
+                    if md5_matched:
+                        return d, 1
 
-                size_matched = m_src.size is not None and m_dest.size is not None and \
-                    m_src.size == m_dest.size
-                src_is_not_newer = m_src.mtime is not None and m_dest.mtime is not None and \
-                    m_src.mtime <= m_dest.mtime
-                if size_matched and src_is_now_newer:                    
-                    return d, 2
+                    size_matched = m_src.size is not None and m_dest.size is not None and \
+                        m_src.size == m_dest.size
+                    src_is_not_newer = m_src.mtime is not None and m_dest.mtime is not None and \
+                        m_src.mtime <= m_dest.mtime
+                    if size_matched and src_is_now_newer:                    
+                        return d, 2
 
-        if not no_lock:
-            lock = self.lock
-            lock.acquire()
-        
-        try:
             if not self._cp(dest_uri=d):
-                # if copy(src->dest) fails then try copy(dest->src)
-                d._cp_from(src_uri=self)
-        except Exception as e:
-            raise e('cp failed. src: {s} dest: {d}'.format(
-                s=str(self), d=str(d))) from e
-
-        if not no_lock:
-            lock.release()
-
+                if not d._cp_from(src_uri=self):
+                    raise Exception(
+                        'cp failed. src: {s} dest: {d}'.format(
+                            s=str(self), d=str(d)))
         return d, 0
 
     def write(self, s, no_lock=False):
         """Write string/bytes to file. It is protected by a locking mechanism.
         """
-        if not no_lock:
-            lock = self.lock
-            lock.acquire()
-
-        self._write(s)
-
-        if not no_lock:
-            lock.release()
+        with self.get_lock(no_lock=no_lock) as lock:
+            self._write(s)
         return
 
     def rm(self, no_lock=False):
         """Remove a URI from its storage. It is protected by by a locking mechanism.
         """
-        if not no_lock:
-            lock = self.lock
-            lock.acquire()
-
-        self._rm()
-
-        if not no_lock:
-            lock.release()
+        with self.get_lock(no_lock=no_lock) as lock:
+            self._rm()
         return
 
     @abstractmethod
@@ -296,7 +284,6 @@ class URIBase(ABC):
             md5: md5 hexadecimal digest
         """
         raise NotImplementedError
-
 
     @abstractmethod
     def read(self, byte=False) -> Union[str, bytes]:
@@ -371,35 +358,78 @@ class URIBase(ABC):
         return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
 
     @classmethod
-    def localize(cls, src_uri, make_md5_file=False, recursive=False) -> Tuple[str, bool]:
-        """Localize a URI on this URI class (cls).
+    def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None, depth=0) -> Tuple[str, bool]:
+        """Localize a source URI on this URI class (cls).
 
+        Recursive localization is supported for the following file extensions:
+            .json:
+                Files defined only in values (not keys) can be recursively localized.
+            .tsv/.csv: 
+                Files defined in all values can be recursively localized.
+            Other extensions can be added through
+                a global function init_uribase(loc_recurse_ext_and_fnc=).
+                or a class constant LOC_RECURSE_EXT_AND_FNC directly.
+                See loc_aux.py to define your own recursion function
+                for a specific extension.
         Args:
             src_uri:
                 Source URI
+            recursive:
+                Localize all files recursively in specified TEXT file extensions.
             make_md5_file:
                 Make an md5 file on this if metadata doesn't have md5
                 assuming that you have write permission on target's directory and
                 its subdirectories recursively.
-            recursive:
-                Localize all files recursively in specified TEXT file extensions.
+            loc_prefix:
+                If defined, use it instead of cls.get_loc_prefix()                
+            depth:
+                To count recursion depth.
         Returns:
             loc_uri:
                 Localized URI STRING (not a AutoURI instance) since it should be used
                 for external function as a callback function.
-            modified:
-                Whether localized file is modified or not.
-                Modified URI is suffixed with this cls' storage type (e.g. .s3.).
+            localized:
+                Whether file is ACTUALLY localized on this cls's storage.
+                ACTUALLY means making a (possibly modified) copy of the original file
+                on this cls' storage (on loc_prefix).
+                This flag includes the following two cases:
+                    modified:
+                        file contents are modified during recursive localization
+                        so localized file is suffixed with 
+                        source's storage type. e.g. .s3, .gcs, and .local
+                    but not modified:
+                        file contents are not modified so localized file is not suffixed
+                        and hence will keep the original file basename
         """
         src_uri = AutoURI(src_uri)
+        if not src_uri.is_valid:
+            return src_uri._uri, False
+        if depth >= AutoURI.LOC_RECURSION_DEPTH_LIMIT:
+            raise AutoURIRecursionError(
+                'Maximum recursion depth {m} exceeded. '
+                'Possible direct/indirect self-reference while '
+                'recursive localization? related file: {f}'.format(
+                    m=depth,
+                    f=src_uri))
 
-        # check if src and dest are on the same storage to skip localization (in most cases)
+        if loc_prefix is None:
+            loc_prefix = cls.get_loc_prefix()
+        else:
+            loc_prefix = loc_prefix.rstrip(cls.get_path_sep())
+        if not loc_prefix:
+            raise ValueError('LOC_PREFIX is not defined.')
+
+        # check if src and dest are on the same storage
+        # to skip localization,
+        # which means making a (possily modified) copy of original file
         on_different_storage = cls is not src_uri.__class__
 
         modified = False
         if recursive:
             # use cls.localize() itself as a callback fnc in recursion
-            fnc_loc = lambda x: cls.localize(x, make_md5_file=make_md5_file, recursive=recursive)
+            fnc_loc = lambda x: cls.localize(
+                 x, recursive=recursive, make_md5_file=make_md5_file, loc_prefix=loc_prefix,
+                 depth=depth + 1)
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
                 if src_uri.ext == ext:
                     # read source contents for recursive localization
@@ -410,27 +440,20 @@ class URIBase(ABC):
         if modified:
             # if modified, always suffix basename (before extension) with target storage cls
             basename = src_uri.basename_wo_ext + cls.get_loc_suffix() + src_uri.ext
-            if on_different_storage:
-                dirname = src_uri.loc_dirname
-            else:
-                # Use a hashed directory name since sometimes
-                # we don't have write permission on this directory
-                dirname = hashlib.md5(src_uri.uri.encode('utf-8')).hexdigest()
-
-            loc_uri = cls.get_path_sep().join([cls.get_loc_prefix(), dirname, basename])
+            dirname = src_uri.loc_dirname
+            loc_uri = cls.get_path_sep().join([loc_prefix, dirname, basename])
             AutoURI(loc_uri).write(maybe_modified_contents)
 
-        elif on_different_storage:            
+        elif on_different_storage:
             basename = src_uri.basename
             dirname = src_uri.loc_dirname
 
-            loc_uri = cls.get_path_sep().join([cls.get_loc_prefix(), dirname, basename])
+            loc_uri = cls.get_path_sep().join([loc_prefix, dirname, basename])
             src_uri.cp(dest_uri=loc_uri, make_md5_file=make_md5_file)
         else:
-            # do nothing
-            loc_uri = src_uri.uri
+            loc_uri = src_uri._uri
 
-        return loc_uri, modified
+        return loc_uri, modified or on_different_storage
 
 
 class AutoURI(URIBase):
