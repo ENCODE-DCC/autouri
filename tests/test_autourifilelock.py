@@ -5,7 +5,7 @@ import os
 import pytest
 import time
 from autouri.autouri import AutoURI, URIBase
-from autouri.filespinlock import AutoURIFileLock
+from autouri.autourifilelock import AutoURIFileLock
 from filelock import Timeout
 
 class AutoURIFileLockTestException(Exception):

@@ -10,7 +10,6 @@ import time
 from typing import Any, Tuple, Union
 from autouri.abspath import AbsPath, init_abspath
 from autouri.autouri import AutoURI, URIBase
-from autouri.filespinlock import FileSpinLock
 from autouri.httpurl import ReadOnlyStorageError
 from autouri.autouri import AutoURIRecursionError
 from .files import (

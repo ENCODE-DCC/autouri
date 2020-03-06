@@ -1,11 +1,20 @@
 #!/usr/bin/env python3
+"""
+Bucket rules:
+    Object versioning must be turned off
+        https://cloud.google.com/storage/docs/object-versioning
+"""
 import os
 import requests
 import binascii
 from base64 import b64decode
+from contextlib import contextmanager
 from datetime import (datetime, timedelta)
 from dateutil.parser import parse as parse_timestamp
 from dateutil.tz import tzutc
+from filelock import BaseFileLock
+from google.api_core.exceptions import NotFound, Forbidden, GatewayTimeout, ServiceUnavailable
+# from requests.exceptions import ConnectionError
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
@@ -31,6 +40,44 @@ def init_gcsuri(
         GCSURI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
 
 
+class GCSURILock(BaseFileLock):
+    def __init__(
+        self, lock_file, timeout=900, poll_interval=0.1, no_lock=False):
+        super().__init__(lock_file, timeout=timeout)
+        self._poll_interval = poll_interval
+
+    def acquire(self, timeout=None, poll_intervall=5.0):
+        """Use self._poll_interval instead of poll_intervall in args
+        """
+        super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+
+    def _acquire(self):
+        u = GCSURI(self._lock_file)
+        blob = u.get_blob(new=True)
+        if blob is not None:
+            try:
+                blob.upload_from_string('')
+                blob.temporary_hold = True
+                blob.patch()
+                self._lock_file_fd = id(self)
+            except (Forbidden, GatewayTimeout, NotFound, ServiceUnavailable):
+                pass
+        return None
+
+    def _release(self):
+        u = GCSURI(self._lock_file)
+        blob = u.get_blob()
+        blob.temporary_hold = False
+        try:
+            # u.rm(no_lock=True)
+            blob.patch()
+            blob.delete()
+            self._lock_file_fd = None
+        except (NotFound,):
+            pass
+        return None
+
+
 class GCSURI(URIBase):
     """
     Class constants:
@@ -40,23 +87,36 @@ class GCSURI(URIBase):
             Path for private key file used to get presigned URLs
         SEC_DURATION_PRESIGNED_URL:
             Duration for presigned URLs
-
     Protected class constants:
-        _GCS_CLIENT:
+        _CACHED_GCS_CLIENT_PER_THREAD:
+            Per-thread GCS client object is required since 
+            GCS client is not thread-safe.
         _CACHED_PRESIGNED_URLS:
+            Can use cached presigned URLs.
     """
     PRIVATE_KEY_FILE: str = None
     SEC_DURATION_PRESIGNED_URL: int = 4233600
 
-    _GCS_CLIENT = None
+    _CACHED_GCS_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
 
     _LOC_SUFFIX = '.gcs'
     _SCHEMES = ('gs://',)
-    _ALLOWED_LOCK_EXCEPTIONS = tuple()
 
-    def __init__(self, uri):
-        super().__init__(uri)
+    def __init__(self, uri, thread_id=-1):
+        super().__init__(uri, thread_id=thread_id)
+
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
+        if no_lock:
+            return contextmanager(lambda: (yield))()
+        if timeout is None:
+            timeout = GCSURI.LOCK_TIMEOUT
+        if poll_interval is None:
+            poll_interval = GCSURI.LOCK_POLL_INTERVAL
+        return GCSURILock(
+            self._uri + AutoURI.LOCK_FILE_EXT,
+            timeout=timeout,
+            poll_interval=poll_interval)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = False, None, None, None
@@ -189,8 +249,14 @@ class GCSURI(URIBase):
         return False
 
     def get_blob(self, new=False) -> Blob:
+        """GCS client has a bug that shows an outdated version of a file
+        when using Blob() without update().
+
+        For read-only functions (e.g. read()), need to directly call
+        cl.get_bucket(bucket).get_blob(path) instead of using Blob() class.
+        """
         bucket, path = self.get_bucket_path()
-        cl = GCSURI.get_gcs_client()
+        cl = GCSURI.get_gcs_client(self._thread_id)
         if new:
             return Blob(name=path, bucket=cl.get_bucket(bucket))
         else:
@@ -203,6 +269,11 @@ class GCSURI(URIBase):
         return bucket, path        
 
     def get_presigned_url(self, sec_duration=None, use_cached=False) -> str:
+        """
+        Args:
+            sec_duration: Duration in seconds. This is ignored if use_cached is on.
+            use_cached: Use a cached URL. 
+        """
         cache = GCSSURI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:
@@ -220,7 +291,10 @@ class GCSURI(URIBase):
         return url
 
     @staticmethod
-    def get_gcs_client() -> storage.Client:
-        if GCSURI._GCS_CLIENT is None:
-            GCSURI._GCS_CLIENT = storage.Client()
-        return GCSURI._GCS_CLIENT
+    def get_gcs_client(thread_id=-1) -> storage.Client:
+        if thread_id in GCSURI._CACHED_GCS_CLIENT_PER_THREAD:
+            return GCSURI._CACHED_GCS_CLIENT_PER_THREAD[thread_id]
+        else:
+            cl = storage.Client()
+            GCSURI._CACHED_GCS_CLIENT_PER_THREAD[thread_id] = cl
+            return cl

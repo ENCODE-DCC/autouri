@@ -4,9 +4,10 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from filelock import SoftFileLock
+from contextlib import contextmanager
+from filelock import BaseFileLock
 from typing import Any, Callable, Dict, Optional, Tuple, Union
-from .filespinlock import AutoURIFileLock
+from .autourifilelock import AutoURIFileLock
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
@@ -93,17 +94,29 @@ class URIBase(ABC):
     _LOC_SUFFIX: str = ''
     _ALLOWED_LOCK_EXCEPTIONS = tuple()
 
-    def __init__(self, uri):
+    def __init__(self, uri, thread_id=-1):
         if isinstance(uri, URIBase):
             self._uri = uri.uri
         else:
             self._uri = uri
+        self._thread_id = -1
 
     def __repr__(self):
         return self._uri
 
     def __str__(self):
         return str(self._uri)
+
+    @property
+    def thread_id(self):
+        """Use for some URI types which are not thread-safe.
+        e.g. GCSURI.
+        """
+        return self._thread_id
+
+    @thread_id.setter
+    def thread_id(self, i):
+        self._thread_id = i
 
     @property
     def uri(self) -> Any:
@@ -214,20 +227,6 @@ class URIBase(ABC):
         """
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> Union[AutoURIFileLock, SoftFileLock]:
-        """Default locking mechanism using FileSpinLock class
-        """
-        if timeout is None:
-            timeout = URIBase.LOCK_TIMEOUT
-        if poll_interval is None:
-            poll_interval = URIBase.LOCK_POLL_INTERVAL
-        return AutoURIFileLock(
-            self._uri + AutoURI.LOCK_FILE_EXT,
-            timeout=timeout,
-            poll_interval=poll_interval,
-            no_lock=no_lock,
-            allowed_exceptions=self.__class__.get_allowed_lock_exceptions())
-
     def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
         Check md5 hash, file size and last modified date if possible to prevent
@@ -299,6 +298,17 @@ class URIBase(ABC):
         with self.get_lock(no_lock=no_lock) as lock:
             self._rm()
         return
+
+    @abstractmethod
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> BaseFileLock:
+        """Locking mechanism with "with" context.
+
+        Args:
+            no_lock: make it a dummy lock
+            timeout: timeout in seconds
+            poll_interval (float): polling interval in seconds
+        """
+        raise NotImplementedError
 
     @abstractmethod
     def get_metadata(self, skip_md5=False, make_md5_file=False) -> URIMetadata:
@@ -503,16 +513,19 @@ class AutoURI(URIBase):
     Therefore, you can use this class as a tester
     to check whether it's a valid URI or not.
     """
-    def __init__(self, uri):
-        super().__init__(uri)
+    def __init__(self, uri, thread_id=-1):
+        super().__init__(uri, thread_id=thread_id)
         for c in URIBase.__subclasses__():
             if c is AutoURI:
                 continue
-            u = c(self._uri)
+            u = c(self._uri, thread_id=thread_id)
             if u.is_valid:
                 self.__class__ = c
                 self._uri = u._uri
                 return
+
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
+        raise NotImplementedError
 
     def get_metadata(self, make_md5_file=False):
         raise NotImplementedError

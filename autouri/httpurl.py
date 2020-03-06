@@ -39,8 +39,8 @@ class HTTPURL(URIBase):
     _LOC_SUFFIX = '.url'
     _SCHEMES = ('http://', 'https://')
 
-    def __init__(self, uri):
-        super().__init__(uri)
+    def __init__(self, uri, thread_id=-1):
+        super().__init__(uri, thread_id=thread_id)
 
     @property
     def loc_dirname(self):
@@ -56,6 +56,11 @@ class HTTPURL(URIBase):
         which can be suffixed with extra parameters starting with ? only.
         """
         return super().basename.split('?', 1)[0]
+
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
+        if no_lock:
+            return contextmanager(lambda: (yield))()
+        raise ReadOnlyStorageError('Cannot lock on a read-only storage.')
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = False, None, None, None
@@ -124,10 +129,10 @@ class HTTPURL(URIBase):
             return b.decode()
 
     def _write(self, s):
-        raise ReadOnlyStorageError('Read-only URI class.')
+        raise ReadOnlyStorageError('Cannot write on a read-only storage.')
 
     def _rm(self):
-        raise ReadOnlyStorageError('Read-only URI class.')
+        raise ReadOnlyStorageError('Cannot remove a file on a read-only storage.')
 
     def _cp(self, dest_uri):
         """Copy from HTTPURL to 

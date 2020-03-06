@@ -2,10 +2,11 @@
 import hashlib
 import os
 import shutil
+from contextlib import contextmanager
 from filelock import SoftFileLock
 from typing import Dict, Optional, Union
 from .autouri import URIBase, URIMetadata, AutoURI, logger
-from .filespinlock import AutoURIFileLock
+from .autourifilelock import AutoURIFileLock
 
 
 def init_abspath(
@@ -41,20 +42,22 @@ class AbsPath(URIBase):
     _LOC_SUFFIX = '.local'
     _PATH_SEP = os.sep
 
-    def __init__(self, uri):
+    def __init__(self, uri, thread_id=-1):
         uri = os.path.expanduser(uri)
-        super().__init__(uri)
+        super().__init__(uri, thread_id=thread_id)
 
     @property
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> Union[AutoURIFileLock, SoftFileLock]:
+    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
         """Use filelock.SoftFileLock for AbsPath.
         Faster polling and stable. It's also platform-independent.
+        Args:
+            poll_interval: dummy. use a fixed pollin rate defined in BaseFileLock.
         """
         if no_lock:
-            return super().get_lock(no_lock=no_lock)
+            return contextmanager(lambda: (yield))()
         else:
             if timeout is None:
                 timeout = URIBase.LOCK_TIMEOUT

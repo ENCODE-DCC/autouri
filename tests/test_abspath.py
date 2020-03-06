@@ -5,7 +5,7 @@ import time
 from typing import Any, Tuple, Union
 from autouri.abspath import AbsPath, init_abspath
 from autouri.autouri import AutoURI, URIBase
-from autouri.filespinlock import FileSpinLock
+from filelock import BaseFileLock
 from autouri.httpurl import ReadOnlyStorageError
 from autouri.autouri import AutoURIRecursionError
 from .files import (
@@ -120,12 +120,12 @@ def test_abspath_md5_file_uri(local_v6_txt):
     assert AbsPath(local_v6_txt + URIBase.MD5_FILE_EXT).uri == local_v6_txt + URIBase.MD5_FILE_EXT
 
 
-def test_abspath_lock(local_v6_txt) -> 'FileSpinLock':
+def test_abspath_get_lock(local_v6_txt):
     """FileSpinLock will be tested thoroughly in test_filespinlock.py.
     Here we just test if it creates a correct FileSpinLock class.
     """
-    assert isinstance(AbsPath(local_v6_txt).get_lock(), FileSpinLock)
-    assert isinstance(AbsPath(local_v6_txt).get_lock(no_lock=True), FileSpinLock)
+    assert isinstance(AbsPath(local_v6_txt).get_lock(), BaseFileLock)
+    assert isinstance(AbsPath(local_v6_txt).get_lock(no_lock=True), BaseFileLock)
 
 
 @pytest.mark.xfail(raises=ReadOnlyStorageError)
