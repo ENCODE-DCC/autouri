@@ -6,7 +6,6 @@ from contextlib import contextmanager
 from filelock import SoftFileLock
 from typing import Dict, Optional, Union
 from .autouri import URIBase, URIMetadata, AutoURI, logger
-from .autourifilelock import AutoURIFileLock
 
 
 def init_abspath(

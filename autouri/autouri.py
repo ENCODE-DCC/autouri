@@ -7,7 +7,6 @@ from collections import namedtuple
 from contextlib import contextmanager
 from filelock import BaseFileLock
 from typing import Any, Callable, Dict, Optional, Tuple, Union
-from .autourifilelock import AutoURIFileLock
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 
 
