@@ -1,39 +1,23 @@
-#!/usr/bin/env python3
 import hashlib
 import os
 import shutil
-from contextlib import contextmanager
 from filelock import SoftFileLock
 from typing import Dict, Optional, Union
-from .autouri import URIBase, URIMetadata, AutoURI, logger
 
-
-def init_abspath(
-    loc_prefix: Optional[str]=None,
-    map_path_to_url: Optional[Dict[str, str]]=None,
-    md5_calc_chunk_size: Optional[int]=None):
-    """
-    Helper function to initialize AbsPath class constants
-        loc_prefix:
-            Inherited from URIBase
-    """
-    if loc_prefix is not None:
-        AbsPath.LOC_PREFIX = loc_prefix
-    if map_path_to_url is not None:
-        AbsPath.MAP_PATH_TO_URL = map_path_to_url
-    if md5_calc_chunk_size is not None:
-        AbsPath.MD5_CALC_CHUNK_SIZE = md5_calc_chunk_size
+from .autouri import URIBase, AutoURI, logger
+from .metadata import URIMetadata, get_seconds_from_epoch
 
 
 class AbsPath(URIBase):
     """
     Class constants:
-        LOC_PREFIX:
+        LOC_PREFIX (inherited):
             Path prefix for localization. Inherited from URIBase class.
         MAP_PATH_TO_URL:
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
-
+        MD5_CALC_CHUNK_SIZE:
+            Chunk size to calculate md5 hash of a local file.
     """
     MAP_PATH_TO_URL: Dict[str, str] = dict()
     MD5_CALC_CHUNK_SIZE: int = 4096
@@ -49,24 +33,25 @@ class AbsPath(URIBase):
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
+    def _get_lock(self, timeout=None, poll_interval=None):
         """Use filelock.SoftFileLock for AbsPath.
-        Faster polling and stable. It's also platform-independent.
+        filelock.SoftFileLock watches a .lock file with faster polling.
+        It's stable and also platform-independent
+
         Args:
-            poll_interval: dummy. use a fixed pollin rate defined in BaseFileLock.
+            poll_interval:
+                This is dummy.
+                Fixed polling rate defined in BaseFileLock is used.
         """
-        if no_lock:
-            return contextmanager(lambda: (yield))()
-        else:
-            if timeout is None:
-                timeout = URIBase.LOCK_TIMEOUT
-            # create directory and use default poll_interval
-            u_lock = AutoURI(self._uri + URIBase.LOCK_FILE_EXT)
-            u_lock.mkdir_dirname()
-            return SoftFileLock(u_lock._uri, timeout=timeout)
+        if timeout is None:
+            timeout = AbsPath.LOCK_TIMEOUT
+        # create directory and use default poll_interval
+        u_lock = AutoURI(self._uri + AbsPath.LOCK_FILE_EXT)
+        u_lock.mkdir_dirname()        
+        return SoftFileLock(u_lock._uri, timeout=timeout)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        """If md5 file doesn't exists then use hashlib.md5() to calculate md5 hash
+        """If md5 file doesn't exist then use hashlib.md5() to calculate md5 hash
         """
         ex = os.path.exists(self._uri)
         mt, sz, md5 = None, None, None
@@ -139,3 +124,15 @@ class AbsPath(URIBase):
             for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
+
+    @staticmethod
+    def init_abspath(
+        loc_prefix: Optional[str]=None,
+        map_path_to_url: Optional[Dict[str, str]]=None,
+        md5_calc_chunk_size: Optional[int]=None):
+        if loc_prefix is not None:
+            AbsPath.LOC_PREFIX = loc_prefix
+        if map_path_to_url is not None:
+            AbsPath.MAP_PATH_TO_URL = map_path_to_url
+        if md5_calc_chunk_size is not None:
+            AbsPath.MD5_CALC_CHUNK_SIZE = md5_calc_chunk_size

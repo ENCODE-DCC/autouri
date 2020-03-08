@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""Race condition tests will be done in test_race_cond.py
+"""Race condition test will be done in test_race_cond.py
+Here, we test 
 """
 import os
 import pytest
 import time
+from filelock import Timeout, BaseFileLock
+
 from autouri.autouri import AutoURI, URIBase
-from autouri.autourifilelock import AutoURIFileLock
-from filelock import Timeout
+
 
 class AutoURIFileLockTestException(Exception):
 	pass
 
 
-def test_filespinlock(
+def test_autouri_lock(
 	local_v6_txt,
 	gcs_v6_txt,
 	s3_v6_txt):
@@ -28,17 +30,12 @@ def test_filespinlock(
 			lock.release()
 		assert not u_lock.exists
 
-		lock = AutoURIFileLock(v6_txt, no_lock=True)
-		lock.acquire()
-		try:		
-			assert not u_lock.exists
-			time.sleep(1)
-		finally:
-			lock.release()
-		assert not u_lock.exists
+		# trivial dummy lock
+		lock = AutoURI(v6_txt).get_lock(no_lock=True)
+		assert not isinstance(lock, BaseFileLock)
 
 
-def test_filespinlock_raise(
+def test_autouri_lock_raise(
 	local_v6_txt,
 	gcs_v6_txt,
 	s3_v6_txt):
@@ -60,7 +57,7 @@ def test_filespinlock_raise(
 			assert not u_lock.exists
 
 
-def test_filespinlock_with_context(
+def test_autouri_lock_with_context(
 	local_v6_txt,
 	gcs_v6_txt,
 	s3_v6_txt):
@@ -78,7 +75,7 @@ def test_filespinlock_with_context(
 		assert not u_lock.exists
 
 
-def test_filespinlock_with_context_raise(
+def test_autouri_lock_with_context_raise(
 	local_v6_txt,
 	gcs_v6_txt,
 	s3_v6_txt):
@@ -96,7 +93,7 @@ def test_filespinlock_with_context_raise(
 			assert False
 
 
-def test_filespinlock_timeout(
+def test_autouri_lock_timeout(
 	local_v6_txt):
 	"""Timeout = 3, 8 sec
 	For local storage (AbsPath) only.

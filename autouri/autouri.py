@@ -1,43 +1,18 @@
-#!/usr/bin/env python3
-import hashlib
 import logging
 import os
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from contextlib import contextmanager
 from filelock import BaseFileLock
+from filelock import logger as logger_filelock
 from typing import Any, Callable, Dict, Optional, Tuple, Union
+
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
+from .metadata import URIMetadata
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-logger = logging.getLogger('autouri') 
-
-
-URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
-
-
-def init_uribase(
-    md5_file_ext: Optional[str]=None,
-    lock_file_ext: Optional[str]=None,
-    lock_timeout: Optional[int]=None,
-    lock_poll_interval: Optional[float]=None,
-    loc_recurse_ext_and_fnc: Optional[Dict[str, Callable]]=None):
-    """Helper for initializing URIBase class constants
-    """
-    if md5_file_ext is not None:
-        URIBase.MD5_FILE_EXT = md5_file_ext
-    if lock_file_ext is not None:
-        URIBase.LOCK_FILE_EXT = lock_file_ext
-    if lock_timeout is not None:
-        URIBase.LOCK_TIMEOUT = lock_timeout
-    if lock_poll_interval is not None:
-        URIBase.LOCK_POLL_INTERVAL = lock_poll_interval
-    if loc_recurse_ext_and_fnc is not None:
-        URIBase.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
-    if loc_recursion_depth_limit is not None:
-        URIBase.LOC_RECURSION_DEPTH_LIMIT = loc_recursion_depth_limit
-        pass
+logger = logging.getLogger('autouri')
+logger_filelock().setLevel(logging.CRITICAL)
 
 
 class AutoURIRecursionError(RuntimeError):
@@ -48,50 +23,57 @@ class URIBase(ABC):
     """A base actract class for all URI classes.
     This class is for file only (no support for directory).
     This class can localize (recursively) URI on different URI class.
+    (loc. stands for localization.)
     A default localization strategy keeps the directory structure and basename of an original URI.
 
     Class constants:
         MD5_FILE_EXT:
             File extention for md5 (.md5).
+        LOC_RECURSE_EXT_AND_FNC:
+            Dict of (file extension, function) to recurse localization.
+                e.g. {'.json': recurse_dict, '.tsv': recurse_tsv}
+        LOC_RECURSION_DEPTH_LIMIT:
+            Limit depth of recursive localization
+            to prevent/detect direct/indirect self referencing.
         LOCK_FILE_EXT:
             Lock file's extention (.lock).
         LOCK_TIMEOUT:
             Lock file timeout (-1 for no timeout).
         LOCK_POLL_INTERVAL:
             Lock file polling interval in seconds.
-        LOC_RECURSE_EXT_AND_FNC:
-            Dict of (file extension, function) to recurse localization.
-                e.g. {'.json': recurse_dict, '.tsv': recurse_tsv}
-        LOC_RECURSION_DEPTH_LIMIT:
-            To detect direct/indirect self reference.
+
+    Class constants for subclasses only
         LOC_PREFIX:
             Cache path prefix for localization on this class' storage.
-            This should be None for this base class but must be specified for subclasses.
+            This should be '' for this base class
+            but must be specified for subclasses.
 
     Protected class constants:
         _PATH_SEP:
-            Separator for directory.
+            Separator string for directory.
         _SCHEMES:
-            Scheme strings (tuple of str)
+            Tuple of scheme strings
         _LOC_SUFFIX:
-            Suffix after recursive localization if file is modified
+            Suffix for a localized file
+            if file is modified during recursive localization
     """
     MD5_FILE_EXT: str = '.md5'
-    LOCK_FILE_EXT: str = '.lock'
-    LOCK_TIMEOUT: int = 900
-    LOCK_POLL_INTERVAL: float = 10.0
     LOC_RECURSE_EXT_AND_FNC: Dict[str, Callable] = {
         '.json': recurse_json,
         '.tsv': recurse_tsv,
         '.csv': recurse_csv
     }
-    LOC_RECURSION_DEPTH_LIMIT: int = 10
+
+    LOCK_FILE_EXT: str = '.lock'
+    LOCK_TIMEOUT: int = 900
+    LOCK_POLL_INTERVAL: float = 10.0
+
     LOC_PREFIX: str = ''
+    LOC_RECURSION_DEPTH_LIMIT: int = 10
 
     _PATH_SEP: str = '/'
     _SCHEMES: Tuple[str, ...] = tuple()
     _LOC_SUFFIX: str = ''
-    _ALLOWED_LOCK_EXCEPTIONS = tuple()
 
     def __init__(self, uri, thread_id=-1):
         if isinstance(uri, URIBase):
@@ -212,7 +194,9 @@ class URIBase(ABC):
             try:
                 m_md5 = u_md5.get_metadata(skip_md5=True)
                 if m_md5.exists:
-                    if m_md5.mtime >= self.mtime:
+                    self_mtime = self.mtime
+                    if m_md5.mtime is not None and self_mtime is not None \
+                            and m_md5.mtime >= self_mtime:
                         return u_md5.read()
             except Exception as e:
                 pass
@@ -298,12 +282,21 @@ class URIBase(ABC):
             self._rm()
         return
 
-    @abstractmethod
     def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> BaseFileLock:
+        """
+        Args:
+            no_lock: make it a dummy lock (for better code readibility for context)
+        """
+        if no_lock:
+            return contextmanager(lambda: (yield))()
+        else:
+            return self._get_lock(timeout=timeout, poll_interval=poll_interval)
+
+    @abstractmethod
+    def _get_lock(self, timeout=None, poll_interval=None) -> BaseFileLock:
         """Locking mechanism with "with" context.
 
         Args:
-            no_lock: make it a dummy lock
             timeout: timeout in seconds
             poll_interval (float): polling interval in seconds
         """
@@ -394,12 +387,6 @@ class URIBase(ABC):
         Tailing slash will be removed.
         """
         return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
-
-    @classmethod
-    def get_allowed_lock_exceptions(cls) -> Tuple[Exception, ...]:
-        """Separator for directory.
-        """
-        return cls._ALLOWED_LOCK_EXCEPTIONS
 
     @classmethod
     def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None, depth=0) -> Tuple[str, bool]:
@@ -499,6 +486,27 @@ class URIBase(ABC):
 
         return loc_uri, modified or on_different_storage
 
+    @staticmethod
+    def init_uribase(
+        md5_file_ext: Optional[str]=None,
+        loc_recurse_ext_and_fnc: Optional[Dict[str, Callable]]=None,
+        loc_recursion_depth_limit: Optional[int]=None,
+        lock_file_ext: Optional[str]=None,
+        lock_timeout: Optional[int]=None,
+        lock_poll_interval: Optional[float]=None):
+        if md5_file_ext is not None:
+            URIBase.MD5_FILE_EXT = md5_file_ext
+        if loc_recurse_ext_and_fnc is not None:
+            URIBase.LOC_RECURSE_EXT_AND_FNC = loc_recurse_ext_and_fnc
+        if loc_recursion_depth_limit is not None:
+            URIBase.LOC_RECURSION_DEPTH_LIMIT = loc_recursion_depth_limit
+        if lock_file_ext is not None:
+            URIBase.LOCK_FILE_EXT = lock_file_ext
+        if lock_timeout is not None:
+            URIBase.LOCK_TIMEOUT = lock_timeout
+        if lock_poll_interval is not None:
+            URIBase.LOCK_POLL_INTERVAL = lock_poll_interval
+
 
 class AutoURI(URIBase):
     """This class automatically detects and converts
@@ -523,7 +531,7 @@ class AutoURI(URIBase):
                 self._uri = u._uri
                 return
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
+    def _get_lock(self, timeout=None, poll_interval=None):
         raise NotImplementedError
 
     def get_metadata(self, make_md5_file=False):

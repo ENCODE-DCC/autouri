@@ -4,6 +4,12 @@
 import hashlib
 import os
 import pytest
+
+from autouri.httpurl import HTTPURL
+from autouri.abspath import AbsPath
+from autouri.gcsuri import GCSURI
+from autouri.s3uri import S3URI
+
 from .files import (
     v6_txt_contents,
     j1_json,
@@ -12,10 +18,9 @@ from .files import (
     v5_csv,
     v6_txt,
 )
-from autouri.httpurl import HTTPURL, init_httpurl
-from autouri.abspath import AbsPath, init_abspath
-from autouri.gcsuri import GCSURI, init_gcsuri
-from autouri.s3uri import S3URI, init_s3uri
+
+
+GCS_ENDPOINT_URL = 'https://storage.googleapis.com/'
 
 
 def pytest_addoption(parser):
@@ -25,17 +30,20 @@ def pytest_addoption(parser):
     )
     parser.addoption(
         '--s3-root', default='s3://encode-test-autouri/tmp',
-        help='S3 root path for CI test.'
+        help='S3 root path for CI test. '
+             'This S3 bucket must be configured without versioning.'
     )
     parser.addoption(
         '--gcs-root', default='gs://encode-test-autouri/tmp',
-        help='GCS root path for CI test.'
+        help='GCS root path for CI test. '
     )
     parser.addoption(
-        '--url-root', default='https://storage.googleapis.com/encode-test-autouri/tmp',
-        help='URL root path for CI test.'
+        '--gcs-root-url', default='gs://encode-test-autouri/tmp_url',
+        help='GCS root path for CI test for URLs. '
+             'This GCS bucket must be public so that '
+             'anyone can access to it via an URL with '
+             'an endpoint GCS_ENDPOINT_URL. '
     )
-
 
 @pytest.fixture(scope="session")
 def ci_prefix(request):
@@ -53,8 +61,8 @@ def gcs_root(request):
 
 
 @pytest.fixture(scope="session")
-def url_root(request):
-    return request.config.getoption("--url-root").rstrip('/')
+def gcs_root_url(request):
+    return request.config.getoption("--gcs-root-url").rstrip('/')
 
 
 @pytest.fixture(scope='session')
@@ -75,13 +83,20 @@ def gcs_test_path(gcs_root, ci_prefix):
 
 
 @pytest.fixture(scope='session')
+def gcs_test_path_url(gcs_root_url, ci_prefix):
+    return '{gcs_root_url}/{ci_prefix}'.format(
+        gcs_root_url=gcs_root_url, ci_prefix=ci_prefix)
+
+
+@pytest.fixture(scope='session')
 def gcs_test_path_self_ref(gcs_test_path):
     return '{gcs_test_path}/self_ref'.format(
         gcs_test_path=gcs_test_path)
 
 
 @pytest.fixture(scope='session')
-def url_test_path(url_root, ci_prefix):
+def url_test_path(gcs_root_url, ci_prefix):
+    url_root = gcs_root_url.replace('gs://', GCS_ENDPOINT_URL, 1)
     return '{url_root}/{ci_prefix}'.format(
         url_root=url_root, ci_prefix=ci_prefix)
 
@@ -186,6 +201,36 @@ def gcs_v6_txt(gcs_test_path):
     return v6_txt(gcs_test_path, make=True)
 
 
+@pytest.fixture(scope="session")
+def gcs_j1_json_url(gcs_test_path_url, url_test_path):
+    return j1_json(gcs_test_path_url, make=True,
+        prefix_v41=url_test_path,
+        prefix_v421=url_test_path,
+        prefix_v5=url_test_path)
+
+
+@pytest.fixture(scope="session")
+def gcs_v41_json_url(gcs_test_path_url):
+    return v41_json(gcs_test_path_url, make=True)
+
+
+@pytest.fixture(scope="session")
+def gcs_v421_tsv_url(gcs_test_path_url, url_test_path):
+    return v421_tsv(gcs_test_path_url, make=True,
+        prefix_v5=url_test_path,
+        prefix_v1=url_test_path)
+
+
+@pytest.fixture(scope="session")
+def gcs_v5_csv_url(gcs_test_path_url, url_test_path):
+    return v5_csv(gcs_test_path_url, make=True,
+        prefix_v6=url_test_path)
+
+
+@pytest.fixture(scope="session")
+def gcs_v6_txt_url(gcs_test_path_url):
+    return v6_txt(gcs_test_path_url, make=True)
+
 
 @pytest.fixture(scope="session")
 def gcs_j1_json_self_ref(gcs_test_path_self_ref):
@@ -213,35 +258,35 @@ def gcs_v6_txt_self_ref(gcs_test_path_self_ref):
 
 
 @pytest.fixture(scope="session")
-def url_j1_json(gcs_j1_json, url_test_path):
+def url_j1_json(gcs_j1_json_url, url_test_path):
     """URL is read-only. So this is a link to the actual file on GCS.
     """
     return j1_json(url_test_path, make=False)
 
 
 @pytest.fixture(scope="session")
-def url_v41_json(gcs_v41_json, url_test_path):
+def url_v41_json(gcs_v41_json_url, url_test_path):
     """URL is read-only. So this is a link to the actual file on GCS.
     """
     return v41_json(url_test_path, make=False)
 
 
 @pytest.fixture(scope="session")
-def url_v421_tsv(gcs_v421_tsv, url_test_path):
+def url_v421_tsv(gcs_v421_tsv_url, url_test_path):
     """URL is read-only. So this is a link to the actual file on GCS.
     """
     return v421_tsv(url_test_path, make=False)
 
 
 @pytest.fixture(scope="session")
-def url_v5_csv(gcs_v5_csv, url_test_path):
+def url_v5_csv(gcs_v5_csv_url, url_test_path):
     """URL is read-only. So this is a link to the actual file on GCS.
     """
     return v5_csv(url_test_path, make=False)
 
 
 @pytest.fixture(scope="session")
-def url_v6_txt(gcs_v6_txt, url_test_path):
+def url_v6_txt(gcs_v6_txt_url, url_test_path):
     """URL is read-only. So this is a link to the actual file on GCS.
     """
     return v6_txt(url_test_path, make=False)

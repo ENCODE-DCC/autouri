@@ -2,12 +2,13 @@
 import os
 import pytest
 import time
-from typing import Any, Tuple, Union
-from autouri.abspath import AbsPath, init_abspath
-from autouri.autouri import AutoURI, URIBase
 from filelock import BaseFileLock
+from typing import Any, Tuple, Union
+
+from autouri.abspath import AbsPath
+from autouri.autouri import AutoURI, URIBase
 from autouri.httpurl import ReadOnlyStorageError
-from autouri.autouri import AutoURIRecursionError
+
 from .files import (
     v6_txt_contents,
     common_paths,
@@ -120,15 +121,22 @@ def test_abspath_md5_file_uri(local_v6_txt):
     assert AbsPath(local_v6_txt + URIBase.MD5_FILE_EXT).uri == local_v6_txt + URIBase.MD5_FILE_EXT
 
 
-def test_abspath_get_lock(local_v6_txt):
-    """FileSpinLock will be tested thoroughly in test_filespinlock.py.
-    Here we just test if it creates a correct FileSpinLock class.
-    """
-    assert isinstance(AbsPath(local_v6_txt).get_lock(), BaseFileLock)
-    assert isinstance(AbsPath(local_v6_txt).get_lock(no_lock=True), BaseFileLock)
-
-
 @pytest.mark.xfail(raises=ReadOnlyStorageError)
+def test_abspath_cp_url(
+    local_v6_txt,
+    url_test_path) -> 'AutoURI':
+    """Test copying local_v6_txt to the following destination storages:
+        url_test_path: local -> url
+            This will fail as intended since URL is read-only.
+    """
+    u = AbsPath(local_v6_txt)
+    basename = os.path.basename(local_v6_txt)
+
+    for test_path in (url_test_path, ):
+        u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
+        _, ret = u.cp(u_dest)
+
+
 def test_abspath_cp(
     local_v6_txt,
     local_test_path,
@@ -139,8 +147,6 @@ def test_abspath_cp(
         local_test_path: local -> local
         s3_test_path: local -> s3
         gcs_test_path: local -> gcs
-        url_test_path: local -> url
-            This will fail as intended since URL is read-only.
 
     Parameters to be tested:
         no_lock:
@@ -155,7 +161,7 @@ def test_abspath_cp(
     u = AbsPath(local_v6_txt)
     basename = os.path.basename(local_v6_txt)
 
-    for test_path in (local_test_path, s3_test_path, gcs_test_path, url_test_path):
+    for test_path in (local_test_path, s3_test_path, gcs_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -222,6 +228,12 @@ def test_abspath_write(local_test_path):
     assert not u.exists
 
 
+@pytest.mark.xfail(raises=IOError)
+def test_abspath_write_on_root():
+    u = AbsPath('/x-x-x-x/x.tmp')
+    u.write('test')
+
+
 def test_abspath_rm(local_test_path):
     u = AbsPath(local_test_path + '/test_abspath_rm.tmp')
 
@@ -273,10 +285,10 @@ def test_abspath_get_mapped_url(local_v6_txt):
     basename = os.path.basename(local_v6_txt)
     url_prefix = 'http://my.test.com'
 
-    init_abspath(map_path_to_url={dirname: url_prefix})
+    AbsPath.init_abspath(map_path_to_url={dirname: url_prefix})
     assert u.get_mapped_url() == os.path.join(url_prefix, basename)
 
-    init_abspath(map_path_to_url=dict())
+    AbsPath.init_abspath(map_path_to_url=dict())
     assert u.get_mapped_url() == None
 
 
@@ -301,9 +313,9 @@ def test_abspath_get_loc_suffix() -> str:
 
 def test_abspath_get_loc_prefix() -> str:
     test_loc_prefix = 'test_abspath_get_loc_prefix'
-    init_abspath(loc_prefix=test_loc_prefix)
+    AbsPath.init_abspath(loc_prefix=test_loc_prefix)
     assert AbsPath.get_loc_prefix() == test_loc_prefix
-    init_abspath(loc_prefix='')
+    AbsPath.init_abspath(loc_prefix='')
     assert AbsPath.get_loc_prefix() == ''
 
 
@@ -386,7 +398,7 @@ def test_abspath_localize(
         recurse_raise_if_uri_not_exist(loc_uri)
 
     # localization from remote storages
-    for j1_json in (gcs_j1_json,): # s3_j1_json, url_j1_json):
+    for j1_json in (gcs_j1_json, s3_j1_json, url_j1_json):
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
 

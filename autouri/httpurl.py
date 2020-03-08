@@ -1,24 +1,9 @@
-#!/usr/bin/env python3
-import binascii
 import hashlib
 import requests
-from base64 import b64decode
-from datetime import datetime
-from dateutil.parser import parse as parse_timestamp
-from dateutil.tz import tzutc
 from typing import Optional
-from .autouri import URIBase, URIMetadata, AutoURI, logger
 
-
-def init_httpurl(
-    http_chunk_size: Optional[int]=None):
-    """
-    Helper function to initialize HTTPURL class constants
-        loc_prefix:
-            Inherited from URIBase
-    """
-    if http_chunk_size is not None:
-        HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
+from .autouri import URIBase, AutoURI, logger
+from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class ReadOnlyStorageError(Exception):
@@ -28,8 +13,6 @@ class ReadOnlyStorageError(Exception):
 class HTTPURL(URIBase):
     """
     Class constants:
-        LOC_PREFIX:
-            Path prefix for localization. Inherited from URIBase class.
         HTTP_CHUNK_SIZE:
             Dict to replace path prefix with URL prefix.
             Useful to convert absolute path into URL on a web server.
@@ -57,39 +40,41 @@ class HTTPURL(URIBase):
         """
         return super().basename.split('?', 1)[0]
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
-        if no_lock:
-            return contextmanager(lambda: (yield))()
+    def _get_lock(self, timeout=None, poll_interval=None):
         raise ReadOnlyStorageError('Cannot lock on a read-only storage.')
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
+        """Known issues about mtime:
+
+        For URLs hosted on GCS (Google Cloud Storage) buckets, mtime will point to creation time
+        if GCS object already existed and is modified. mtime of GCS object itself is accurate
+        but corresponding URL on a public bucket will still have
+        "Last-modified" property which is pointing to creation time.
+        """
         ex, mt, sz, md5 = False, None, None, None
-        # get header only
-        r = requests.get(
-            self._uri, stream=True, allow_redirects=True,
-            headers=requests.utils.default_headers())
         try:
+            # get header only
+            r = requests.get(
+                self._uri, stream=True, allow_redirects=True,
+                headers=requests.utils.default_headers())
             r.raise_for_status()
             # make keys lower-case
             h = {k.lower(): v for k, v in r.headers.items()}
             ex = True
 
-            md5_raw = None
-            if 'content-md5' in h:
-                md5_raw = h['content-md5']
-            elif 'x-goog-hash' in h:
-                hashes = h['x-goog-hash'].strip().split(',')
-                for hs in hashes:
-                    if hs.strip().startswith('md5='):
-                        md5_raw = hs.strip().replace('md5=', '', 1)
-            if md5_raw is None and 'etag' in h:
-                md5_raw = h['etag']
-            if md5_raw is not None:
-                md5_raw = md5_raw.strip('"\'')
-                if len(md5_raw) == 32:
-                    md5 = md5_raw
-                else:
-                    md5 = binascii.hexlify(b64decode(md5_raw)).decode()
+            if not skip_md5:
+                if 'content-md5' in h:
+                    md5 = parse_md5_str(h['content-md5'])
+                elif 'x-goog-hash' in h:
+                    hashes = h['x-goog-hash'].strip().split(',')
+                    for hs in hashes:
+                        if hs.strip().startswith('md5='):
+                            raw = hs.strip().replace('md5=', '', 1)
+                            md5 = parse_md5_str(raw)
+                if md5 is None and 'etag' in h:
+                    md5 = parse_md5_str(h['etag'])
+                if md5 is None:
+                    md5 = self.md5_from_file
 
             if 'content-length' in h:
                 sz = int(h['content-length'])
@@ -97,18 +82,10 @@ class HTTPURL(URIBase):
                 sz = int(h['x-goog-stored-content-length'])
 
             if 'last-modified' in h:
-                utc_t = parse_timestamp(h['last-modified'])
-            else:
-                utc_t = None
-            if utc_t is not None:              
-                utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())      
-                mt = (utc_t - utc_epoch).total_seconds()
+                mt = get_seconds_from_epoch(h['last-modified'])
 
-            if md5 is None and not skip_md5:
-                md5 = self.md5_from_file
-
-        except Exception as e:
-            print(e)
+        except (requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError):
             pass
 
         return URIMetadata(
@@ -155,11 +132,20 @@ class HTTPURL(URIBase):
         return False
 
     def _cp_from(self, src_uri):
-        raise ReadOnlyStorageError('Read-only URI class.')
+        raise ReadOnlyStorageError('Cannot copy to a read-only storage.')
 
     @staticmethod
     def get_http_chunk_size() -> int:
-        if HTTPURL.HTTP_CHUNK_SIZE % (256*1024) > 0:
-            raise ValueError('http_chunk_size must be a multiple of 256 KB (256*1024 B) '
-                             'to be compatible with cloud storage APIs (GCS and AWS S3).')
         return HTTPURL.HTTP_CHUNK_SIZE
+
+    @staticmethod
+    def init_httpurl(
+        http_chunk_size: Optional[int]=None):
+        if http_chunk_size is not None:
+            HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
+        if HTTPURL.HTTP_CHUNK_SIZE % (256*1024) > 0:
+            raise ValueError(
+                'HTTPURL.HTTP_CHUNK_SIZE must be a multiple of 256 KB (256*1024) '
+                'to be compatible with cloud storage APIs (GCS and AWS S3).')
+
+

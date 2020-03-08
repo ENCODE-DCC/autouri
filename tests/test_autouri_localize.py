@@ -8,10 +8,11 @@ import os
 import pytest
 import time
 from typing import Any, Tuple, Union
-from autouri.abspath import AbsPath, init_abspath
-from autouri.autouri import AutoURI, URIBase
+
+from autouri.abspath import AbsPath
+from autouri.autouri import AutoURI, URIBase, AutoURIRecursionError
 from autouri.httpurl import ReadOnlyStorageError
-from autouri.autouri import AutoURIRecursionError
+
 from .files import (
     v6_txt_contents,
     common_paths,

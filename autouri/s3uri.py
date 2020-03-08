@@ -1,49 +1,38 @@
-#!/usr/bin/env python3
-import binascii
-from base64 import b64decode
+"""S3 Bucket rules:
+    S3 Object versioning must be turned off, which is
+    in the advanced settings on the 2nd page of bucket creation UI.
+"""
+import requests
 from boto3 import client
 from botocore.errorfactory import ClientError
-from contextlib import contextmanager
-from datetime import datetime
-from dateutil.parser import parse as parse_timestamp
-from dateutil.tz import tzutc
 from filelock import BaseFileLock
-from io import BytesIO
+from tempfile import NamedTemporaryFile
 from typing import Tuple, Optional
-from .autouri import URIBase, URIMetadata, AutoURI, logger
 
-
-def init_s3uri(
-    loc_prefix: Optional[str]=None,
-    sec_duration_presigned_url: Optional[int]=None):
-    """
-    Helper function to initialize S3URI class constants
-        loc_prefix:
-            Inherited from URIBase
-    """
-    if loc_prefix is not None:
-        S3URI.LOC_PREFIX = loc_prefix
-    if sec_duration_presigned_url is not None:
-        S3URI.SEC_DURATION_PRESIGNED_URL = sec_duration_presigned_url
+from .autouri import URIBase, AutoURI, logger
+from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class S3URILock(BaseFileLock):
+    """Unstable locking not using S3 Object Lock.
+    """
     def __init__(
         self, lock_file, timeout=900, poll_interval=0.1, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
 
     def acquire(self, timeout=None, poll_intervall=5.0):
-        """Use self._poll_interval instead of poll_intervall in args
+        """To use self._poll_interval instead of poll_intervall in args.
         """
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
         u = S3URI(self._lock_file)
         try:
-            u.write('', no_lock=True)
-            self._lock_file_fd = id(self)
-        except (ClientError,):
+            if not u.exists:
+                u.write('', no_lock=True)
+                self._lock_file_fd = id(self)
+        except ClientError as e:
             pass
         return None
 
@@ -60,16 +49,16 @@ class S3URILock(BaseFileLock):
 class S3URI(URIBase):
     """
     Class constants:
-        LOC_PREFIX:
+        LOC_PREFIX (inherited):
             Path prefix for localization. Inherited from URIBase class.
-        SEC_DURATION_PRESIGNED_URL:
+        DURATION_PRESIGNED_URL:
             Duration for presigned URLs
 
     Protected class constants:
-        _BOTO3_CLIENT:
+        _CACHED_BOTO3_CLIENT_PER_THREAD:
         _CACHED_PRESIGNED_URLS:
     """
-    SEC_DURATION_PRESIGNED_URL: int = 4233600
+    DURATION_PRESIGNED_URL: int = 4233600
 
     _CACHED_BOTO3_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
@@ -80,15 +69,13 @@ class S3URI(URIBase):
     def __init__(self, uri, thread_id=-1):
         super().__init__(uri, thread_id=thread_id)
 
-    def get_lock(self, no_lock=False, timeout=None, poll_interval=None):
-        if no_lock:
-            return contextmanager(lambda: (yield))()
+    def _get_lock(self, timeout=None, poll_interval=None):
         if timeout is None:
             timeout = S3URI.LOCK_TIMEOUT
         if poll_interval is None:
             poll_interval = S3URI.LOCK_POLL_INTERVAL
         return S3URILock(
-            self._uri + AutoURI.LOCK_FILE_EXT,
+            self._uri + S3URI.LOCK_FILE_EXT,
             timeout=timeout,
             poll_interval=poll_interval)
 
@@ -104,34 +91,22 @@ class S3URI(URIBase):
             h = {k.lower(): v for k, v in m.items()}
             ex = True
 
-            md5_raw = None
-            if 'content-md5' in h:
-                md5_raw = h['content-md5']
-            elif 'etag' in h:
-                md5_raw = h['etag']
-            if md5_raw is not None:
-                md5_raw = md5_raw.strip('"\'')
-                if len(md5_raw) == 32:
-                    md5 = md5_raw
-                else:
-                    md5 = binascii.hexlify(b64decode(md5_raw)).decode()
+            if not skip_md5:
+                if 'content-md5' in h:
+                    md5 = parse_md5_str(h['content-md5'])
+                elif 'etag' in h:
+                    md5 = parse_md5_str(h['etag'])
+                if md5 is None:
+                    # make_md5_file is ignored for S3URI
+                    md5 = self.md5_from_file                    
 
             if 'content-length' in h:
                 sz = int(h['content-length'])
 
             if 'last-modified' in h:
-                utc_t = parse_timestamp(h['last-modified'])
-            else:
-                utc_t = None
-            if utc_t is not None:              
-                utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())      
-                mt = (utc_t - utc_epoch).total_seconds()
+                mt = get_seconds_from_epoch(h['last-modified'])
 
-            if md5 is None and not skip_md5:
-                md5 = self.md5_from_file
-                # make_md5_file is ignored for S3URI
-
-        except (ClientError,):
+        except Exception as e:
             pass
 
         return URIMetadata(
@@ -201,6 +176,7 @@ class S3URI(URIBase):
             HTTPURL
         """
         from .abspath import AbsPath
+        from .httpurl import HTTPURL
 
         src_uri = AutoURI(src_uri)
         cl = S3URI.get_boto3_client(self._thread_id)
@@ -218,11 +194,10 @@ class S3URI(URIBase):
                 src_uri._uri, stream=True, allow_redirects=True,
                 headers=requests.utils.default_headers())
             r.raise_for_status()
-            b = BytesIO()
-            with open(b, 'wb') as fp:
-                for chunk in r.iter_content(HTTPURL.get_chunk_size()):
+            with NamedTemporaryFile() as fp:
+                for chunk in r.iter_content(HTTPURL.get_http_chunk_size()):
                     fp.write(chunk)
-            with open(b, 'rb') as fp:
+                fp.seek(0)
                 cl.upload_fileobj(
                     Fileobj=fp,
                     Bucket=bucket,
@@ -236,10 +211,10 @@ class S3URI(URIBase):
         bucket, path = self.uri_wo_scheme.split(S3URI.get_path_sep(), 1)
         return bucket, path
 
-    def get_presigned_url(self, sec_duration=None, use_cached=False) -> str:
+    def get_presigned_url(self, duration=None, use_cached=False) -> str:
         """
         Args:
-            sec_duration: Duration in seconds. This is ignored if use_cached is on.
+            duration: Duration in seconds. This is ignored if use_cached is on.
             use_cached: Use a cached URL. 
         """
         cache = S3URI._CACHED_PRESIGNED_URLS
@@ -248,7 +223,7 @@ class S3URI(URIBase):
                 return cache[self._uri]
         cl = S3URI.get_boto3_client(self._thread_id)
         bucket, path = self.get_bucket_path()
-        duration = sec_duration if sec_duration is not None else S3URI.SEC_DURATION_PRESIGNED_URL
+        duration = duration if duration is not None else S3URI.DURATION_PRESIGNED_URL
         url = cl.generate_presigned_url(
             'get_object',
             Params={'Bucket': bucket, 'Key': path},
@@ -264,3 +239,13 @@ class S3URI(URIBase):
             cl = client('s3')
             S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id] = cl
             return cl
+
+    @staticmethod
+    def init_s3uri(
+        loc_prefix: Optional[str]=None,
+        duration_presigned_url: Optional[int]=None):
+        if loc_prefix is not None:
+            S3URI.LOC_PREFIX = loc_prefix
+        if duration_presigned_url is not None:
+            S3URI.DURATION_PRESIGNED_URL = duration_presigned_url
+

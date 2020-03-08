@@ -23,8 +23,10 @@ import pytest
 import time
 from multiprocessing import Pool
 from typing import Any, Tuple, Union
+
 from autouri.abspath import AbsPath
 from autouri.autouri import AutoURI
+
 from .files import v6_txt_contents
 
 
@@ -52,8 +54,8 @@ def test_race_cond_autouri_write(
         So we need to specify thread_id here.
         This will make a new GCS client instance for each thread.
     """
-    nth = 5
-    for test_path in (s3_test_path,): # (s3_test_path, gcs_test_path, local_test_path gcs_test_path):
+    nth = 20
+    for test_path in (gcs_test_path,): # (s3_test_path, gcs_test_path, local_test_path gcs_test_path):
         prefix = os.path.join(test_path, 'test_race_cond_autouri_write')
         s = os.path.join(prefix, 'v6.txt')
         u = AutoURI(s)
