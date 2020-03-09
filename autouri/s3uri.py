@@ -4,7 +4,7 @@
 """
 import requests
 from boto3 import client
-from botocore.errorfactory import ClientError
+from botocore.exceptions import ClientError
 from filelock import BaseFileLock
 from tempfile import NamedTemporaryFile
 from typing import Tuple, Optional
@@ -33,7 +33,9 @@ class S3URILock(BaseFileLock):
                 u.write('', no_lock=True)
                 self._lock_file_fd = id(self)
         except ClientError as e:
-            pass
+            status = e.response["ResponseMetadata"]["HTTPStatusCode"]
+            if status in (403, 404):
+                raise
         return None
 
     def _release(self):
@@ -41,7 +43,7 @@ class S3URILock(BaseFileLock):
         try:
             u.rm(no_lock=True)
             self._lock_file_fd = None
-        except (ClientError,):
+        except ClientError:
             pass
         return None
 

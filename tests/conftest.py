@@ -52,16 +52,22 @@ def ci_prefix(request):
 
 @pytest.fixture(scope="session")
 def s3_root(request):
+    """S3 root to generate test S3 URIs on.
+    """
     return request.config.getoption("--s3-root").rstrip('/')
 
 
 @pytest.fixture(scope="session")
 def gcs_root(request):
+    """GCS root to generate test GCS URIs on.
+    """
     return request.config.getoption("--gcs-root").rstrip('/')
 
 
 @pytest.fixture(scope="session")
 def gcs_root_url(request):
+    """GCS root to generate test URLs on. This GCS bucket should be public.
+    """
     return request.config.getoption("--gcs-root-url").rstrip('/')
 
 

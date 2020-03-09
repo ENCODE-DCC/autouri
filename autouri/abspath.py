@@ -47,7 +47,7 @@ class AbsPath(URIBase):
             timeout = AbsPath.LOCK_TIMEOUT
         # create directory and use default poll_interval
         u_lock = AutoURI(self._uri + AbsPath.LOCK_FILE_EXT)
-        u_lock.mkdir_dirname()        
+        u_lock.mkdir_dirname()       
         return SoftFileLock(u_lock._uri, timeout=timeout)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
@@ -113,7 +113,13 @@ class AbsPath(URIBase):
         return None
 
     def mkdir_dirname(self):
+        """Create a directory but raise if no write permission on it
+        """
         os.makedirs(self.dirname, exist_ok=True)
+        if not os.access(self.dirname, os.W_OK):
+            raise PermissionError(
+                'No permission to write on directory: {d}'.format(
+                    d=self.dirname))
         return
 
     def __calc_md5sum(self):

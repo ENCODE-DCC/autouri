@@ -32,7 +32,7 @@ class GCSURILock(BaseFileLock):
 
     def _acquire(self):
         u = GCSURI(self._lock_file)
-        blob, _ = u.get_blob(new=True)
+        blob, bucket_obj = u.get_blob(new=True)
         if blob is not None:
             try:
                 blob.upload_from_string('')
@@ -248,7 +248,11 @@ class GCSURI(URIBase):
                 if new and blob is None:
                     blob = Blob(name=path, bucket=bucket_obj)
                 break
-            except (Exception,):
+            except NotFound:
+                raise
+            except PermissionDenied:
+                raise
+            except:
                 time.sleep(GCSURI.RETRY_BUCKET_DELAY)
         return blob, bucket_obj
 

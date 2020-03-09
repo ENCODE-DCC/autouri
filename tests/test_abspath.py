@@ -228,10 +228,20 @@ def test_abspath_write(local_test_path):
     assert not u.exists
 
 
-@pytest.mark.xfail(raises=IOError)
-def test_abspath_write_on_root():
-    u = AbsPath('/x-x-x-x/x.tmp')
-    u.write('test')
+def test_abspath_write_no_permission():
+    try:
+        u = AbsPath('/x.tmp')
+        u.write('test')
+        assert False
+    except PermissionError:
+        pass
+
+    try:
+        u = AbsPath('/x.tmp')
+        u.write('test')
+        assert False
+    except PermissionError:
+        pass
 
 
 def test_abspath_rm(local_test_path):
