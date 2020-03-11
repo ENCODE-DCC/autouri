@@ -19,7 +19,39 @@ It is a Python API for recursively localizing file URIs (e.g. `gs://`. `s3://`, 
 
 ## Usage
 
-CLI
+Python API example.
+```
+import autouri
+from autouri.autouri import AutoURI
+from autouri.abspath import AbsPath
+
+
+def example():
+    # example for basic functions
+    u = AutoURI('gs://test-bucket/hello-world.txt')
+    u.write('some text here')
+
+    u.cp('s3://test-bucket/hello-another-world.txt')
+
+    if u.exists:
+        u.rm()
+
+    target_s = AutoURI('s3://test-bucket/hello-another-world.txt').read()
+    print(target_s)
+
+
+def example_loc():
+    # example for localization
+    u = AutoURI('gs://test-bucket/hello-world.json')
+
+    AutoURI.localize(
+        'gs://test-bucket/hello-world.json',
+        recursive=True,
+        loc_prefix='/home/leepc12/loc_cache_dir/')
+
+
+example()
+example_loc()
 
 ```
 $ autouri --help
