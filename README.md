@@ -27,8 +27,8 @@ from autouri import AbsPath
 
 
 def example():
-	"""Example for basic functions
-	"""
+    """Example for basic functions
+    """
 
     u = AutoURI('gs://test-bucket/hello-world.txt')
     u.write('some text here')
@@ -43,8 +43,8 @@ def example():
 
 
 def example_loc_method1():
-	"""Example for localization	(method1)
-	"""
+    """Example for localization    (method1)
+    """
     u = AutoURI('gs://test-bucket/hello-world.json')
 
     # call directly from AutoURI (or URIBase)
@@ -56,8 +56,8 @@ def example_loc_method1():
 
 
 def example_loc_method2():
-	"""Example for localization	(method2)
-	"""
+    """Example for localization    (method2)
+    """
     u = AutoURI('gs://test-bucket/hello-world.json')
 
     # initialize that class' constant first
