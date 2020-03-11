@@ -80,7 +80,7 @@ class URIBase(ABC):
             self._uri = uri.uri
         else:
             self._uri = uri
-        self._thread_id = -1
+        self._thread_id = thread_id
 
     def __repr__(self):
         return self._uri

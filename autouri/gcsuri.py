@@ -22,9 +22,10 @@ from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 class GCSURILock(BaseFileLock):
     def __init__(
-        self, lock_file, timeout=900, poll_interval=0.1, no_lock=False):
+        self, lock_file, thread_id=-1, timeout=900, poll_interval=0.1, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
+        self._thread_id = thread_id
 
     def acquire(self, timeout=None, poll_intervall=5.0):
         """Use self._poll_interval instead of poll_intervall in args
@@ -32,7 +33,7 @@ class GCSURILock(BaseFileLock):
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
-        u = GCSURI(self._lock_file)
+        u = GCSURI(self._lock_file, thread_id=self._thread_id)
         blob, bucket_obj = u.get_blob(new=True)
         if blob is not None:
             try:
@@ -45,7 +46,7 @@ class GCSURILock(BaseFileLock):
         return None
 
     def _release(self):
-        u = GCSURI(self._lock_file)
+        u = GCSURI(self._lock_file, thread_id=self._thread_id)
         blob, _ = u.get_blob()
         if blob is not None:
             blob.temporary_hold = False
@@ -107,6 +108,7 @@ class GCSURI(URIBase):
             poll_interval = GCSURI.LOCK_POLL_INTERVAL
         return GCSURILock(
             self._uri + GCSURI.LOCK_FILE_EXT,
+            thread_id=self._thread_id,
             timeout=timeout,
             poll_interval=poll_interval)
 
@@ -323,7 +325,7 @@ class GCSURI(URIBase):
         return url
 
     @staticmethod
-    def get_gcs_client(thread_id=-1) -> storage.Client:
+    def get_gcs_client(thread_id) -> storage.Client:
         if thread_id in GCSURI._CACHED_GCS_CLIENT_PER_THREAD:
             return GCSURI._CACHED_GCS_CLIENT_PER_THREAD[thread_id]
         else:
