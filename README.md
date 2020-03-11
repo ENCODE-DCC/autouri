@@ -72,7 +72,8 @@ def example_loc_method2():
 
 
 example()
-example_loc()
+example_loc_method1()
+example_loc_method2()
 
 ```
 
