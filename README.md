@@ -54,6 +54,9 @@ example()
 example_loc()
 
 ```
+
+CLI
+```
 $ autouri --help
 usage: autouri [-h] {metadata,cp,read,write,rm,loc,presign} ...
 
