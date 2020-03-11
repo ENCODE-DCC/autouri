@@ -446,6 +446,7 @@ class URIBase(ABC):
         if loc_prefix is None:
             loc_prefix = cls.get_loc_prefix()
         else:
+            cls = AutoURI(loc_prefix).__class__
             loc_prefix = loc_prefix.rstrip(cls.get_path_sep())
         if not loc_prefix:
             raise ValueError('LOC_PREFIX is not defined.')

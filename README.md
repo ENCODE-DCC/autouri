@@ -22,12 +22,14 @@ It is a Python API for recursively localizing file URIs (e.g. `gs://`. `s3://`, 
 Python API example.
 ```
 import autouri
-from autouri.autouri import AutoURI
-from autouri.abspath import AbsPath
+from autouri import AutoURI
+from autouri import AbsPath
 
 
 def example():
-    # example for basic functions
+	"""Example for basic functions
+	"""
+
     u = AutoURI('gs://test-bucket/hello-world.txt')
     u.write('some text here')
 
@@ -40,14 +42,33 @@ def example():
     print(target_s)
 
 
-def example_loc():
-    # example for localization
+def example_loc_method1():
+	"""Example for localization	(method1)
+	"""
     u = AutoURI('gs://test-bucket/hello-world.json')
 
+    # call directly from AutoURI (or URIBase)
+    # loc_prefix defines destination URI directory for localization
     AutoURI.localize(
         'gs://test-bucket/hello-world.json',
         recursive=True,
         loc_prefix='/home/leepc12/loc_cache_dir/')
+
+
+def example_loc_method2():
+	"""Example for localization	(method2)
+	"""
+    u = AutoURI('gs://test-bucket/hello-world.json')
+
+    # initialize that class' constant first
+    # loc_prefix defines destination URI directory for localization
+    AbsPath.init_abspath(
+        loc_prefix='/home/leepc12/loc_cache_dir/')
+
+    # call from a specific storage class
+    AbsPath.localize(
+        'gs://test-bucket/hello-world.json',
+        recursive=True)
 
 
 example()
