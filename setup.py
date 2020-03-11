@@ -8,6 +8,7 @@ setuptools.setup(
     name='autouri',
     version=autouri.__version__,
     python_requires='>3.4.1',
+    scripts=['bin/autouri'],
     author='Jin Lee',
     author_email='leepc12@gmail.com',
     description='Automatic conversion/localization for URIs (s3://, gs://, http://, https:// and local path)',

@@ -41,7 +41,8 @@ class HTTPURL(URIBase):
         return super().basename.split('?', 1)[0]
 
     def _get_lock(self, timeout=None, poll_interval=None):
-        raise ReadOnlyStorageError('Cannot lock on a read-only storage.')
+        raise ReadOnlyStorageError('Cannot lock on a read-only storage. {f}'.format(
+            f=self._uri))
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         """Known issues about mtime:
@@ -106,10 +107,12 @@ class HTTPURL(URIBase):
             return b.decode()
 
     def _write(self, s):
-        raise ReadOnlyStorageError('Cannot write on a read-only storage.')
+        raise ReadOnlyStorageError('Cannot write on a read-only storage. {f}'.format(
+            f=self._uri))
 
     def _rm(self):
-        raise ReadOnlyStorageError('Cannot remove a file on a read-only storage.')
+        raise ReadOnlyStorageError('Cannot remove a file on a read-only storage. {f}'.format(
+            f=self._uri))
 
     def _cp(self, dest_uri):
         """Copy from HTTPURL to 
@@ -132,7 +135,8 @@ class HTTPURL(URIBase):
         return False
 
     def _cp_from(self, src_uri):
-        raise ReadOnlyStorageError('Cannot copy to a read-only storage.')
+        raise ReadOnlyStorageError('Cannot copy to a read-only storage. {f}'.format(
+            f=self._uri))
 
     @staticmethod
     def get_http_chunk_size() -> int:

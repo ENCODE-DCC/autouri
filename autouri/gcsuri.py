@@ -178,6 +178,9 @@ class GCSURI(URIBase):
         if isinstance(dest_uri, (GCSURI, AbsPath)):            
             src_blob, src_bucket = self.get_blob()
 
+            if src_blob is None:
+                raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
+
             if isinstance(dest_uri, GCSURI):
                 _, dest_path = dest_uri.get_bucket_path()
                 _, dest_bucket = dest_uri.get_blob()
@@ -308,8 +311,11 @@ class GCSURI(URIBase):
             raise Exception('GCS private key file not found. f:{f}'.format(
                 f=private_key_file))
         credentials = Credentials.from_service_account_file(private_key_file)
-        duration = duration if duration is not None else GSSURI.DURATION_PRESIGNED_URL        
+        duration = duration if duration is not None else GCSURI.DURATION_PRESIGNED_URL        
+        print(duration)
         blob, _ = self.get_blob()
+        if blob is None:
+            raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
         url = blob.generate_signed_url(
             expiration=timedelta(seconds=duration),
             credentials=credentials)
