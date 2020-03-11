@@ -285,7 +285,7 @@ class URIBase(ABC):
     def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> BaseFileLock:
         """
         Args:
-            no_lock: make it a dummy lock (for better code readibility for context)
+            no_lock: make it a dummy lock (for better code readability for context)
         """
         if no_lock:
             return contextmanager(lambda: (yield))()

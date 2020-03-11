@@ -73,4 +73,3 @@ def test_localize_mixed(
             loc_prefix=loc_prefix_)
         # check if all URIs defeind in localized JSON file exist
         recurse_raise_if_uri_not_exist(loc_uri)
-

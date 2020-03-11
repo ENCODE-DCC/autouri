@@ -4,9 +4,10 @@ import pytest
 import time
 from filelock import BaseFileLock
 from typing import Any, Tuple, Union
+from requests.exceptions import HTTPError
 
 from autouri.autouri import AutoURI, URIBase
-from autouri.httpurl import ReadOnlyStorageError
+from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 from autouri.s3uri import S3URI
 
 from .files import (
@@ -278,14 +279,26 @@ def test_s3uri_read(s3_v6_txt):
 
 # original methods in S3URI
 def test_s3uri_get_bucket_path():
-    assert S3URI('s3://a/b/c/d/e.txt').get_bucket_path == ('a', 'b/c/d/e.txt')
-    assert S3URI('s3://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
-    assert S3URI('s3://ok-test-bucket/hello.txt').get_bucket_path == ('ok-test-bucket', 'hello.txt')
+    assert S3URI('s3://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
+    assert S3URI('s3://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
+    assert S3URI('s3://ok-test-bucket/hello.txt').get_bucket_path() == ('ok-test-bucket', 'hello.txt')
 
 
-def test_gcsuri_get_presigned_url():
-    # self, duration=None, use_cached=False) -> str:
-    pass
+def test_s3uri_get_presigned_url(s3_v6_txt):
+    u = S3URI(s3_v6_txt)
+    # 2 seconds duration
+    url = u.get_presigned_url(duration=2)
+
+    u_url = HTTPURL(url)
+    assert u_url.is_valid and u_url.read() == v6_txt_contents()
+    time.sleep(5)
+    # should expire in 2 seconds
+    try:        
+        s = u_url.read()
+        assert False
+    except HTTPError:
+        # forbidden since it's already expired
+        pass
 
 
 # classmethods
@@ -362,15 +375,15 @@ def test_s3uri_localize(
     """
     loc_prefix = os.path.join(s3_test_path, 'test_s3uri_localize')    
 
-    for j1_json in (gcs_j1_json,):
-        # localization from local storage
+    for j1_json in (s3_j1_json,):
+        # localization from same storage
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
         basename = u_j1_json.basename
 
         # for localization both with or without recursive
         # nothing should be localized actually
-        # since they are already on a local storage
+        # since they are already on same storage
         # so loc_prefix directory itself shouldn't be created
         loc_uri, localized = S3URI.localize(
             u_j1_json,
@@ -389,7 +402,7 @@ def test_s3uri_localize(
         recurse_raise_if_uri_not_exist(loc_uri)
 
     # localization from remote storages
-    for j1_json in (local_j1_json, s3_j1_json, url_j1_json):
+    for j1_json in (local_j1_json, gcs_j1_json, url_j1_json):
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
         basename = u_j1_json.basename

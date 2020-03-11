@@ -7,7 +7,7 @@ from typing import Any, Tuple, Union
 
 from autouri.autouri import AutoURI, URIBase
 from autouri.gcsuri import GCSURI
-from autouri.httpurl import ReadOnlyStorageError
+from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 
 from .files import (
     v6_txt_contents,
@@ -165,7 +165,7 @@ def test_gcsuri_cp(
     u = GCSURI(gcs_v6_txt)
     basename = os.path.basename(gcs_v6_txt)
 
-    for test_path in (local_test_path, s3_test_path, gcs_test_path,):
+    for test_path in (local_test_path, gcs_test_path, s3_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -277,20 +277,39 @@ def test_gcsuri_read(gcs_v6_txt):
 
 
 # original methods in GCSURI
-def test_gcsuri_get_blob():
-    # self, new=False) -> Blob:
-    pass
+def test_gcsuri_get_blob(gcs_v6_txt):
+    u = GCSURI(gcs_v6_txt)
+    u_non_existing = GCSURI(gcs_v6_txt + '.blah')
+
+    b_new = u.get_blob(new=True)
+    assert b_new is not None
+    b = u.get_blob(new=False)
+    assert b is not None
+
+    b_new = u_non_existing.get_blob(new=True)
+    assert b_new is not None
+    b = u_non_existing.get_blob(new=False)
+    assert b is None
 
 
 def test_gcsuri_get_bucket_path():
-    assert S3URI('gs://a/b/c/d/e.txt').get_bucket_path == ('a', 'b/c/d/e.txt')
-    assert S3URI('gs://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
-    assert S3URI('gs://ok-test-bucket/hello.txt').get_bucket_path == ('ok-test-bucket', 'hello.txt')
+    assert GCSURI('gs://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
+    assert GCSURI('gs://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
+    assert GCSURI('gs://ok-test-bucket/hello.txt').get_bucket_path() == ('ok-test-bucket', 'hello.txt')
 
 
-def test_gcsuri_get_presigned_url():
-    # self, duration=None, use_cached=False) -> str:
-    pass
+def test_gcsuri_get_presigned_url(gcs_v6_txt, gcp_private_key_file):
+    u = GCSURI(gcs_v6_txt)
+    # 2 seconds duration
+    url = u.get_presigned_url(duration=2, private_key_file=gcp_private_key_file)
+
+    u_url = HTTPURL(url)
+    assert u_url.is_valid and u_url.read() == v6_txt_contents()
+    # should expire in 2 seconds
+    # hard to test it on a local machine with GCP authentication passed...
+    # tested in on my laptop instead it works fine.
+    # time.sleep(5)
+    # assert u_url.read() != v6_txt_contents()
 
 
 # classmethods
@@ -366,16 +385,17 @@ def test_gcsuri_localize(
             j1.json
     """
     loc_prefix = os.path.join(gcs_test_path, 'test_gcsuri_localize')    
+    # GCSURI.init_gcsuri(use_gsutil_for_s3=True)
 
     for j1_json in (gcs_j1_json,):
-        # localization from local storage
+        # localization from same storage
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
         basename = u_j1_json.basename
 
         # for localization both with or without recursive
         # nothing should be localized actually
-        # since they are already on a local storage
+        # since they are already on same storage
         # so loc_prefix directory itself shouldn't be created
         loc_uri, localized = GCSURI.localize(
             u_j1_json,

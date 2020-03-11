@@ -44,6 +44,13 @@ def pytest_addoption(parser):
              'anyone can access to it via an URL with '
              'an endpoint GCS_ENDPOINT_URL. '
     )
+    parser.addoption(
+        '--gcp-private-key-file', required=True,
+        help='GCP private key file (JSON format) to test presigning GCS URIs. '
+             'Generate one for a service account that has an admin access to both '
+             '--gcs-root and --gcs-root-url.'
+    )
+
 
 @pytest.fixture(scope="session")
 def ci_prefix(request):
@@ -69,6 +76,13 @@ def gcs_root_url(request):
     """GCS root to generate test URLs on. This GCS bucket should be public.
     """
     return request.config.getoption("--gcs-root-url").rstrip('/')
+
+
+@pytest.fixture(scope="session")
+def gcp_private_key_file(request):
+    """GCS private key file to test presigning GCS URIs.
+    """
+    return request.config.getoption("--gcp-private-key-file")
 
 
 @pytest.fixture(scope='session')
@@ -124,6 +138,12 @@ def mixed_s3_test_path(s3_test_path):
 def mixed_gcs_test_path(gcs_test_path):
     return '{gcs_test_path}/mixed'.format(
         gcs_test_path=gcs_test_path)
+
+
+@pytest.fixture(scope='session')
+def mixed_gcs_test_path_url(gcs_test_path_url):
+    return '{gcs_test_path_url}/mixed'.format(
+        gcs_test_path_url=gcs_test_path_url)
 
 
 @pytest.fixture(scope='session')
@@ -311,10 +331,12 @@ def mixed_j1_json(
 
 
 @pytest.fixture(scope="session")
-def mixed_v41_json(mixed_gcs_test_path, mixed_url_test_path):
+def mixed_v41_json(mixed_gcs_test_path_url, mixed_url_test_path):
     """Actual file is created on GCS then it will have a correspondig URL.
     """
-    return v41_json(mixed_gcs_test_path, make=True)
+    gcs_path = v41_json(mixed_gcs_test_path_url, make=True)
+    url = gcs_path.replace(mixed_gcs_test_path_url, mixed_url_test_path, 1)
+    return url
 
 
 @pytest.fixture(scope="session")

@@ -156,7 +156,7 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         if isinstance(dest_uri, S3URI):
-            dest_bucket, dest_path = dest_uri.get_path()
+            dest_bucket, dest_path = dest_uri.get_bucket_path()
             cl.copy_object(
                 CopySource={
                     'Bucket': bucket,
@@ -185,7 +185,7 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         if isinstance(src_uri, AbsPath):
-            cl.upload_file(
+            p = cl.upload_file(
                 Filename=src_uri._uri,
                 Bucket=bucket,
                 Key=path)
@@ -204,7 +204,7 @@ class S3URI(URIBase):
                     Fileobj=fp,
                     Bucket=bucket,
                     Key=path)
-            return True
+            return True        
         return False
 
     def get_bucket_path(self) -> Tuple[str, str]:

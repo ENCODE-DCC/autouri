@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Features:    
     - Wraps google-cloud-storage for gs:// URIs.
@@ -11,6 +12,8 @@ Features:
         - Keeping the original directory structure.
         - Can recursively localize all files in a CSV/TSV/JSON(value only) file.
 """
+import argparse
+
 from .autouri import URIBase, AutoURI
 from .abspath import AbsPath
 from .httpurl import HTTPURL
@@ -19,3 +22,8 @@ from .gcsuri import GCSURI
 
 
 __version__ = '0.1.0'
+
+
+def parse_args():
+    pass
+

@@ -5,13 +5,14 @@
 import os
 import requests
 import time
+from datetime import timedelta
 from filelock import BaseFileLock
 from google.api_core.exceptions import NotFound, Forbidden, GatewayTimeout, ServiceUnavailable
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
 from subprocess import check_call, PIPE, CalledProcessError
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Tuple, Optional
 from urllib3.exceptions import HTTPError
 
@@ -70,6 +71,11 @@ class GCSURI(URIBase):
             Number of retrial to access a bucket
         RETRY_BUCKET_DELAY:
             Delay for each retrial in seconds
+        USE_GSUTIL_FOR_S3 (experimental):
+            Use gsutil (CLI) for direct transfer between S3 and GCS buckets
+            WARNING:
+                gsutil must be configured correctly to have all
+                AWS credentials in ~/.boto file.
 
     Protected class constants:
         _CACHED_GCS_CLIENT_PER_THREAD:
@@ -83,6 +89,7 @@ class GCSURI(URIBase):
 
     RETRY_BUCKET: int = 3
     RETRY_BUCKET_DELAY: int = 1
+    USE_GSUTIL_FOR_S3: bool = False
 
     _CACHED_GCS_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
@@ -160,7 +167,7 @@ class GCSURI(URIBase):
     def _cp(self, dest_uri):
         """Copy from GCSURI to 
             GCSURI
-            S3URI
+            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
             AbsPath
         """
         from .s3uri import S3URI
@@ -179,18 +186,29 @@ class GCSURI(URIBase):
 
             elif isinstance(dest_uri, AbsPath):
                 dest_uri.mkdir_dirname()
-                src_blob.update()
+                # mtime is not updated without update().
+                src_blob.update()                
                 src_blob.download_to_filename(dest_uri._uri)
                 return True
 
         elif isinstance(dest_uri, S3URI):
-            rc = check_call(['gsutil', '-q', 'cp', self._uri, dest_uri._uri])
-            return rc == 0
+            if GCSURI.USE_GSUTIL_FOR_S3:
+                rc = check_call(['gsutil', '-q', 'cp', self._uri, dest_uri._uri])
+                return rc == 0
+            else:
+                # use local temporary file instead
+                with TemporaryDirectory() as tmp_d:
+                    dest_uri_local = AbsPath(os.path.join(tmp_d, self.basename))
+                    # lockless copy
+                    self.cp(dest_uri=dest_uri_local, no_lock=True, no_checksum=True)
+                    dest_uri_local.cp(dest_uri=dest_uri, no_lock=True, no_checksum=True)
+                return True
+
         return False
 
     def _cp_from(self, src_uri):
         """Copy to GCSURI from
-            S3URI
+            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
             AbsPath
             HTTPURL
         """
@@ -206,8 +224,16 @@ class GCSURI(URIBase):
             return True
 
         elif isinstance(src_uri, S3URI):
-            rc = check_call(['gsutil', '-q', 'cp', src_uri._uri, self._uri])
-            return rc == 0
+            if GCSURI.USE_GSUTIL_FOR_S3:
+                rc = check_call(['gsutil', '-q', 'cp', src_uri._uri, self._uri])
+                return rc == 0
+            else:
+                # use local temporary file instead
+                with TemporaryDirectory() as tmp_d:
+                    dest_uri_local = AbsPath(os.path.join(tmp_d, self.basename))
+                    src_uri.cp(dest_uri=dest_uri_local, no_lock=True, no_checksum=True)
+                    dest_uri_local.cp(dest_uri=self, no_lock=True, no_checksum=True)
+                return True
 
         elif isinstance(src_uri, HTTPURL):
             r = requests.get(
@@ -262,23 +288,28 @@ class GCSURI(URIBase):
         bucket, path = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
         return bucket, path        
 
-    def get_presigned_url(self, duration=None, use_cached=False) -> str:
+    def get_presigned_url(self, duration=None, private_key_file=None, use_cached=False) -> str:
         """
         Args:
             duration: Duration in seconds. This is ignored if use_cached is on.
             use_cached: Use a cached URL. 
         """
-        cache = GCSSURI._CACHED_PRESIGNED_URLS
+        cache = GCSURI._CACHED_PRESIGNED_URLS
         if use_cached:
             if cache is not None and self._uri in cache:
                 return cache[self._uri]
-        blob = self.get_blob()
-        private_key_file = os.path.expanduser(GCSURI.PRIVATE_KEY_FILE)
+        # if not self.exists:
+        #     raise Exception('File does not exist. f={f}'.format(self._uri))
+        if private_key_file is None:            
+            private_key_file = os.path.expanduser(GCSURI.PRIVATE_KEY_FILE)
+        else:
+            private_key_file = os.path.expanduser(private_key_file)
         if not os.path.exists(private_key_file):
             raise Exception('GCS private key file not found. f:{f}'.format(
                 f=private_key_file))
         credentials = Credentials.from_service_account_file(private_key_file)
         duration = duration if duration is not None else GSSURI.DURATION_PRESIGNED_URL        
+        blob, _ = self.get_blob()
         url = blob.generate_signed_url(
             expiration=timedelta(seconds=duration),
             credentials=credentials)
@@ -300,7 +331,8 @@ class GCSURI(URIBase):
         private_key_file: Optional[str]=None,
         duration_presigned_url: Optional[int]=None,
         retry_bucket: Optional[int]=None,
-        retry_bucket_delay: Optional[int]=None):
+        retry_bucket_delay: Optional[int]=None,
+        use_gsutil_for_s3: Optional[bool]=None):
         if loc_prefix is not None:
             GCSURI.LOC_PREFIX = loc_prefix
         if private_key_file is not None:
@@ -311,3 +343,5 @@ class GCSURI(URIBase):
             GCSURI.RETRY_BUCKET = retry_bucket
         if retry_bucket_delay is not None:
             GCSURI.RETRY_BUCKET_DELAY = retry_bucket_delay
+        if use_gsutil_for_s3 is not None:
+            GCSURI.USE_GSUTIL_FOR_S3 = use_gsutil_for_s3
