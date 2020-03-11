@@ -7,7 +7,7 @@ Features:
     - Wraps Python requests for HTTP URLs.
     - Can presign a bucket URI to get a temporary public URL (e.g. for genome browsers).
     - File locking (using .lock file for bucket URIs).
-    - MD5 hash checking to prevent unnecessary re-uploading.
+    - MD5 hash checking to prevent unnecessary re-downloading.
     - Localization on a different URI type.
         - Keeping the original directory structure.
         - Can recursively localize all files in a CSV/TSV/JSON(value only) file.
