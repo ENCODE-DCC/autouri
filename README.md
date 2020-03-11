@@ -20,7 +20,7 @@ It is a Python API for recursively localizing file URIs (e.g. `gs://`. `s3://`, 
 ## Usage
 
 Python API example.
-```
+```python
 import autouri
 from autouri import AutoURI
 from autouri import AbsPath
