@@ -281,14 +281,14 @@ def test_gcsuri_get_blob(gcs_v6_txt):
     u = GCSURI(gcs_v6_txt)
     u_non_existing = GCSURI(gcs_v6_txt + '.blah')
 
-    b_new = u.get_blob(new=True)
+    b_new, _ = u.get_blob(new=True)
     assert b_new is not None
-    b = u.get_blob(new=False)
+    b, _ = u.get_blob(new=False)
     assert b is not None
 
-    b_new = u_non_existing.get_blob(new=True)
+    b_new, _ = u_non_existing.get_blob(new=True)
     assert b_new is not None
-    b = u_non_existing.get_blob(new=False)
+    b, _ = u_non_existing.get_blob(new=False)
     assert b is None
 
 
