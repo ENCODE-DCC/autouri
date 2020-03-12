@@ -1,0 +1,72 @@
+defaults: &defaults
+  machine: 
+    image: ubuntu:latest
+  working_directory: ~/autouri
+
+
+install_python3: &install_python3
+  name: Install build essential, python3, pip3
+  command: |
+    sudo apt-get update && sudo apt-get install build-essential python3 python3-pip
+
+
+install_py3_packages: &install_py3_packages
+  name: Install Python packages
+  command: |
+    sudo pip3 install pytest requests filelock
+
+
+install_gcs_lib: &install_gcs_api
+  name: Install Google Cloud SDK (gcloud and gsutil) and Python API (google-cloud-storage)
+  command: |    
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+    sudo apt-get update && sudo apt-get install google-cloud-sdk
+    sudo pip3 install google-cloud-storage
+    
+
+install_aws_lib: &install_aws_lib
+  name: Install AWS Python API (boto3) and CLI (awscli)
+  command: |
+    sudo pip3 install boto3 awscli
+
+
+# Define jobs here
+version: 2
+jobs:
+  pytest:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *install_python3
+      - run: *install_gcs_lib
+      - run: *install_aws_lib
+      - run:
+          no_output_timeout: 60m
+          command: |
+            # sign in
+            echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
+            gcloud auth activate-service-account --project=${GOOGLE_PROJECT_ID} --key-file=tmp_key.json
+            gcloud config set project ${GOOGLE_PROJECT_ID}
+            aws configure set ${AWS_ACCESS_KEY_ID} ${AWS_ACCESS_KEY_SECRET}
+
+            # the following buckets must be public:
+            #    gs://encode-test-autouri/tmp_url 
+
+	    # run pytest
+            cd tests/
+            pytest --ci-prefix ${CIRCLE_WORKFLOW_ID} \
+                   --gcp-private-key-file tmp_key.json \
+                   --s3-root s3://encode-test-autouri/tmp \
+                   --gcs-root gs://encode-test-autouri/tmp \
+                   --gcs-root-url gs://encode-test-autouri/tmp_url \
+            rm -f tmp_key.json
+
+ 
+# Define workflow here
+workflows:
+  version: 2
+  build_workflow:
+    jobs:
+      - pytest
+
