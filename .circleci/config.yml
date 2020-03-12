@@ -16,7 +16,7 @@ install_py3_packages: &install_py3_packages
     sudo pip3 install pytest requests filelock
 
 
-install_gcs_lib: &install_gcs_api
+install_gcs_lib: &install_gcs_lib
   name: Install Google Cloud SDK (gcloud and gsutil) and Python API (google-cloud-storage)
   command: |    
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
@@ -39,6 +39,7 @@ jobs:
     steps:
       - checkout
       - run: *install_python3
+      - run: *install_py3_packages
       - run: *install_gcs_lib
       - run: *install_aws_lib
       - run:
