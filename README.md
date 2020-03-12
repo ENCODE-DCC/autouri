@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/ENCODE-DCC/autouri.svg?style=svg)](https://circleci.com/gh/ENCODE-DCC/autouri)
+
 # Autouri
 
 ## Introduction
