@@ -1,6 +1,6 @@
 defaults: &defaults
   machine: 
-    image: circleci/classic:latest
+    image: circleci/buildpack-deps:bionic-scm
   working_directory: ~/autouri
 
 
