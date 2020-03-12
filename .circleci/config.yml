@@ -1,6 +1,6 @@
 defaults: &defaults
   machine: 
-    image: ubuntu:latest
+    image: circleci/classic:latest
   working_directory: ~/autouri
 
 
