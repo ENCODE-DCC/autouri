@@ -54,7 +54,7 @@ jobs:
             # the following buckets must be public:
             #    gs://encode-test-autouri/tmp_url 
 
-	    # run pytest
+            # run pytest
             cd tests/
             pytest --ci-prefix ${CIRCLE_WORKFLOW_ID} \
                    --gcp-private-key-file tmp_key.json \
