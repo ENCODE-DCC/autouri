@@ -110,8 +110,8 @@ def get_local_file_if_valid(s):
     dirname = os.path.dirname(abspath)
 
     if os.path.exists(path) or os.path.exists(dirname):
-        tailing_slash = os.sep if s.endswith(os.sep) else ''
-        return abspath + tailing_slash
+        trailing_slash = os.sep if s.endswith(os.sep) else ''
+        return abspath + trailing_slash
     return s
 
 
