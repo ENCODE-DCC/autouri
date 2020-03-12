@@ -110,7 +110,7 @@ optional arguments:
 ## Requirements
 
 - Python >= 3.6
-    - Packages: requests, filelock
+    - Packages: `requests` and `filelock`
         ```bash
         $ pip3 install requests filelock
         ```
