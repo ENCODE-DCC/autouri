@@ -7,11 +7,11 @@ with open('README.md', 'r') as fh:
 setuptools.setup(
     name='autouri',
     version=autouri.__version__,
-    python_requires='>3.4.1',
+    python_requires='>=3.6',
     scripts=['bin/autouri'],
-    author='Jin Lee',
+    author='Jin wook Lee',
     author_email='leepc12@gmail.com',
-    description='Automatic conversion/localization for URIs (s3://, gs://, http://, https:// and local path)',
+    description='Automatic localization for various URIs (s3://, gs://, http://, https:// and local path)',
     long_description='https://github.com/ENCODE-DCC/autouri',
     long_description_content_type='text/markdown',
     url='https://github.com/ENCODE-DCC/autouri',
@@ -21,5 +21,10 @@ setuptools.setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX :: Linux',
     ],
-    install_requires=['requests', 'pyopenssl', 'google-cloud-storage', 'boto3']
+    install_requires=[
+        'requests', 'pyopenssl',
+        'google-cloud-storage',
+        'boto3', 'awscli',
+        'filelock'
+    ]
 )

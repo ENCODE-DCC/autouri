@@ -31,6 +31,11 @@ def parse_args():
         help='Use gsutil for DIRECT TRANSFER between gs:// and s3://. '
              'gsutil must be installed and configured to have AWS credentials '
              'in ~/.boto file. Run "gsutil config" do generate it.')
+    parent_cp.add_argument('--make-md5-file', action='store_true',
+        help='Make .md5 file to store file\'s md5 hexadecimal string. '
+             'This file can be used later to prevent repeated md5sum calculation. '
+             'This is for local path only since cloud URIs already provide md5 hash '
+             'info in HTTP headers.')
 
     subparser = parser.add_subparsers(dest='action')
 
@@ -70,10 +75,6 @@ def parse_args():
         parents=[parent_src, parent_target, parent_cp])
     p_loc.add_argument('--recursive', action='store_true',
         help='Recursively localize source into target class.')
-    p_loc.add_argument('--make-md5-file', action='store_true',
-        help='Make .md5 file to store file\'s md5 hexadecimal string. '
-             'This file can be used later to prevent repeated md5sum calculation. '
-             'This is for local path only.')
 
     p_presign = subparser.add_parser(
         'presign',
@@ -125,9 +126,20 @@ def main():
             print(target)
         else:
             type_ = 'file'
-        u_src.cp(target)
-        logger.info('Copying from file {s} to {type} {t} done'.format(
-            s=src, type=type_, t=target))
+        _, flag = u_src.cp(target, make_md5_file=args.make_md5_file)
+
+        if flag == 0:
+            logger.info('Copying from file {s} to {type} {t} done'.format(
+                s=src, type=type_, t=target))
+        elif flag:
+            if flag == 1:
+                reason = 'skipped due to md5 hash match'
+            elif flag == 2:
+                reason = 'skipped due to filename/size/mtime match'
+            else:
+                raise NotImplementedError
+            logger.info('Copying from file {s} to {type} {t} {reason}'.format(
+                s=src, type=type_, t=target, reason=reason))
 
     elif args.action == 'read':
         s = AutoURI(src).read()
@@ -148,6 +160,7 @@ def main():
         _, localized = AutoURI(target).__class__.localize(
             src,
             recursive=args.recursive,
+            make_md5_file=args.make_md5_file,
             loc_prefix=target)
         if localized:
             logger.info('Localized {s} on {t}'.format(s=src, t=target))

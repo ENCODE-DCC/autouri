@@ -1,4 +1,4 @@
-# autouri
+# Autouri
 
 ## Introduction
 
@@ -21,7 +21,7 @@ It is a Python API for recursively localizing file URIs (e.g. `gs://`. `s3://`, 
 ## Installation
 
 ```
-$ pip install autouri
+$ pip3 install autouri
 ```
 
 ## Usage
@@ -107,10 +107,59 @@ optional arguments:
   -h, --help            show this help message and exit
 ```
 
+## Requirements
+
+- Python >= 3.6
+    - Packages: requests, filelock
+        ```bash
+        $ pip3 install requests filelock
+        ```
+
+- Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/quickstarts) to get CLIs (`gcloud` and `gsutil`).
+
+- Install `google-cloud-storage` Python API.
+    ```bash
+    $ pip3 install google-cloud-storage
+    ```
+
+- Install `boto3` Python API and AWS CLI.
+    ```bash
+    $ pip3 install boto3 awscli
+    ```
+
+
+## Authentication
+
+GCS: Use `gcloud` CLI. You will be asked to enter credential information of your Google account or redirected to authenticate on a web browser.
+```
+$ gcloud init
+```
+
+S3: Use `aws` CLI. You will be asked to enter credential information of your AWS account.
+```
+$ aws configure
+```
+
+URL: Use `~/.netrc` file to get access to private URLs. Example `.netrc` file. You can define credential per site.
+```
+machine www.encodeproject.org
+login XXXXXXXX
+password abcdefghijklmnop         
+```
+
+## Using `gsutil` for direct trasnfer between GCS and S3
+
+Autouri can use `gsutil` CLI for a direct file transfer between S3 and GCS. Define `--use-gsutil-for-s3` in command line arguments or use `GCSURI.init_gcsuri(use_gsutil_for_s3=True)` in Python. Otherwise, file transfer between GCS and S3 will be streamed through your local machine.
+
+`gsutil` must be configured correctly to obtain AWS credentials.
+```
+$ aws configure  # make sure that you already authenticated for AWS
+$ gsutil config  # write auth info on ~/.boto
+```
 
 ## GCS/S3 bucket policies
 
-`autouri` best works with default bucket configuration for both cloud storages.
+Autouri best works with default bucket configuration for both cloud storages.
 
 GCS (`gs://bucket-name`)
   - Bucket versioning must be turned off.
@@ -120,21 +169,6 @@ S3 (`s3://bucket-name`)
   - Object versioning must be turned off.
 
 
-## netrc authentication
-
-You can use `~/.netrc` to get access to private URLs.
-
-
-## Using `gsutil`
-
-autouri can use `gsutil` for a directory file transfer between S3 and GCS. Define `--use-gsutil-for-s3` in CLI or use `GCSURI.init_gcsuri(use_gsutil_for_s3=True)` in Python.
-
-`gsutil` must be configured correctly with AWS credentials. Install both aws
-```
-$ aws configure
-$ gsutil config
-```
-
 ## Known issues
 
-Race condition is tested with multiple threads trying to write on the same file. File locking based on [filelock](https://github.com/benediktschmitt/py-filelock). Such file locking is stable on local/GCS files but unstable on S3.
+Race condition is tested with multiple threads trying to write on the same file. File locking mechanism is based on [filelock](https://github.com/benediktschmitt/py-filelock). Such file locking is stable on local/GCS files but rather unstable on S3 (tested with 5 threads).

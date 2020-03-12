@@ -429,7 +429,6 @@ def test_gcsuri_localize(
         assert loc_uri == expected
         assert localized and AutoURI(expected).exists
 
-        print(u_j1_json)
         loc_uri, localized = GCSURI.localize(
             u_j1_json,
             recursive=True,

@@ -28,4 +28,7 @@ def parse_md5_str(raw: str) -> str:
     if len(raw) == 32:
         return raw
     else:
-        return base64_to_hex(raw)
+        try:
+            return base64_to_hex(raw)
+        except:
+            return None

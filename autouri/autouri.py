@@ -212,7 +212,7 @@ class URIBase(ABC):
 
     def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
-        Check md5 hash, file size and last modified date if possible to prevent
+        Check md5 hash, file name/size and last modified date if possible to prevent
         unnecessary re-uploading.
 
         Args:
@@ -254,11 +254,12 @@ class URIBase(ABC):
                     if md5_matched:
                         return d, 1
 
+                    name_matched = self.basename == d.basename
                     size_matched = m_src.size is not None and m_dest.size is not None and \
                         m_src.size == m_dest.size
                     src_is_not_newer = m_src.mtime is not None and m_dest.mtime is not None and \
                         m_src.mtime <= m_dest.mtime
-                    if size_matched and src_is_now_newer:                    
+                    if name_matched and size_matched and src_is_not_newer:                    
                         return d, 2
 
             if not self._cp(dest_uri=d):

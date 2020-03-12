@@ -85,9 +85,12 @@ class HTTPURL(URIBase):
             if 'last-modified' in h:
                 mt = get_seconds_from_epoch(h['last-modified'])
 
-        except (requests.exceptions.ConnectionError,
-                requests.exceptions.HTTPError):
+        except requests.exceptions.ConnectionError:
             pass
+        except requests.exceptions.HTTPError as e:
+            status_code = e.response.status_code
+            if status_code == 403:
+                raise
 
         return URIMetadata(
             exists=ex,

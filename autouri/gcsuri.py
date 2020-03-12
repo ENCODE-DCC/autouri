@@ -319,7 +319,6 @@ class GCSURI(URIBase):
                 f=private_key_file))
         credentials = Credentials.from_service_account_file(private_key_file)
         duration = duration if duration is not None else GCSURI.DURATION_PRESIGNED_URL        
-        print(duration)
         blob, _ = self.get_blob()
         if blob is None:
             raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
