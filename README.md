@@ -6,16 +6,23 @@ It is a Python API for recursively localizing file URIs (e.g. `gs://`. `s3://`, 
 
 ## Features:
 
-- Wraps `google-cloud-storage` for `gs://` URIs.
-- Wraps `boto3` for `s3://` URIs.
+- Wraps Python APIs for cloud URIs and URLs.
+    - `google-cloud-storage` for `gs://` URIs.
+    - `boto3` for `s3://` URIs.
+    - `requests` for HTTP URLs `http://` and `https://`.
 - Wraps `gsutil` CLI for direct transfer between `gs://` and `s3://` URIs.
-- Wraps Python `requests` for HTTP URLs `http://` and `https://`.
 - Can presign a bucket URI to get a temporary public URL (e.g. for genome browsers).
-- File locking (using `.lock` file and GCS/S3 object lock).
+- File locking.
 - MD5 hash checking to prevent unnecessary re-downloading.
-- Localization on a different URI type.
+- Localize files on a different URI type.
     - Keeping the original directory structure.
     - Recursively localize all files in CSV/TSV/JSON(value only) files.
+
+## Installation
+
+```
+$ pip install autouri
+```
 
 ## Usage
 
@@ -77,7 +84,7 @@ example_loc_method2()
 
 ```
 
-CLI
+CLI: Use `--help` for each sub-command.
 ```
 $ autouri --help
 usage: autouri [-h] {metadata,cp,read,write,rm,loc,presign} ...
@@ -99,3 +106,35 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
 ```
+
+
+## GCS/S3 bucket policies
+
+`autouri` best works with default bucket configuration for both cloud storages.
+
+GCS (`gs://bucket-name`)
+  - Bucket versioning must be turned off.
+    - Check with `gsutil versioning get gs://[YOUR_BUCKET_NAME]`
+
+S3 (`s3://bucket-name`)
+  - Object versioning must be turned off.
+
+
+## netrc authentication
+
+You can use `~/.netrc` to get access to private URLs.
+
+
+## Using `gsutil`
+
+autouri can use `gsutil` for a directory file transfer between S3 and GCS. Define `--use-gsutil-for-s3` in CLI or use `GCSURI.init_gcsuri(use_gsutil_for_s3=True)` in Python.
+
+`gsutil` must be configured correctly with AWS credentials. Install both aws
+```
+$ aws configure
+$ gsutil config
+```
+
+## Known issues
+
+Race condition is tested with multiple threads trying to write on the same file. File locking based on [filelock](https://github.com/benediktschmitt/py-filelock). Such file locking is stable on local/GCS files but unstable on S3.

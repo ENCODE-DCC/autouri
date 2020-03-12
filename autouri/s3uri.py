@@ -1,6 +1,5 @@
-"""S3 Bucket rules:
-    S3 Object versioning must be turned off, which is
-    in the advanced settings on the 2nd page of bucket creation UI.
+"""S3 Bucket policies:
+    S3 Object versioning must be turned off
 """
 import requests
 from boto3 import client
@@ -14,10 +13,10 @@ from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class S3URILock(BaseFileLock):
-    """Unstable locking not using S3 Object Lock.
+    """Unstable locking without using S3 Object Lock.
     """
     def __init__(
-        self, lock_file, timeout=900, poll_interval=0.1, no_lock=False):
+        self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
 
@@ -54,7 +53,7 @@ class S3URI(URIBase):
         LOC_PREFIX (inherited):
             Path prefix for localization. Inherited from URIBase class.
         DURATION_PRESIGNED_URL:
-            Duration for presigned URLs
+            Duration for presigned URLs in seconds.
 
     Protected class constants:
         _CACHED_BOTO3_CLIENT_PER_THREAD:

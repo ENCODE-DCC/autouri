@@ -1,5 +1,6 @@
-"""GCS Bucket rules:
+"""GCS Bucket policies:
     Object versioning must be turned off
+        Check it with "gsutil versioning get gs://BUCKET-NAME"
         https://cloud.google.com/storage/docs/object-versioning
 """
 import os
@@ -21,8 +22,10 @@ from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class GCSURILock(BaseFileLock):
+    """Slow but stable locking with using GCS temporary_hold
+    """
     def __init__(
-        self, lock_file, thread_id=-1, timeout=900, poll_interval=0.1, no_lock=False):
+        self, lock_file, thread_id=-1, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
         self._thread_id = thread_id
@@ -67,16 +70,18 @@ class GCSURI(URIBase):
         PRIVATE_KEY_FILE:
             Path for private key file used to get presigned URLs
         DURATION_PRESIGNED_URL:
-            Duration for presigned URLs
+            Duration for presigned URLs in seconds.
         RETRY_BUCKET:
-            Number of retrial to access a bucket
+            Number of retrial to access a bucket.
         RETRY_BUCKET_DELAY:
-            Delay for each retrial in seconds
+            Delay for each retrial in seconds.
         USE_GSUTIL_FOR_S3 (experimental):
-            Use gsutil (CLI) for direct transfer between S3 and GCS buckets
+            This is only for direct transfer between S3 and GCS buckets.
             WARNING:
                 gsutil must be configured correctly to have all
                 AWS credentials in ~/.boto file.
+                Run "aws configure" first and then
+                run "gsutil config" to generate corrensponding ~/.boto file.
 
     Protected class constants:
         _CACHED_GCS_CLIENT_PER_THREAD:
