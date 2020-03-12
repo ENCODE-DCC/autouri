@@ -1,6 +1,12 @@
 defaults: &defaults
   machine: 
-    image: circleci/python:3.7
+    image: circleci/classic:latest
+  working_directory: ~/autouri
+
+
+machine_defaults: &machine_defaults
+  machine:
+    image: ubuntu:latest
   working_directory: ~/autouri
 
 
@@ -35,7 +41,7 @@ install_aws_lib: &install_aws_lib
 version: 2
 jobs:
   pytest:
-    <<: *defaults
+    <<: *machine_defaults
     steps:
       - checkout
       - run: *install_python3
