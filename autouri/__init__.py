@@ -119,27 +119,20 @@ def main():
 
     elif args.action == 'cp':
         u_src = AutoURI(src)
-        sep = AutoURI(target).__class__.get_path_sep()
-        if target.endswith(sep):
-            type_ = 'dir'
-            target = sep.join([target.rstrip(sep), u_src.basename])
-            print(target)
-        else:
-            type_ = 'file'
         _, flag = u_src.cp(target, make_md5_file=args.make_md5_file)
 
         if flag == 0:
-            logger.info('Copying from file {s} to {type} {t} done'.format(
-                s=src, type=type_, t=target))
+            logger.info('Copying from file {s} to {t} done'.format(
+                s=src, t=target))
         elif flag:
             if flag == 1:
                 reason = 'skipped due to md5 hash match'
             elif flag == 2:
-                reason = 'skipped due to filename/size/mtime match'
+                reason = 'skipped due to filename/size match and mtime test'
             else:
                 raise NotImplementedError
-            logger.info('Copying from file {s} to {type} {t} {reason}'.format(
-                s=src, type=type_, t=target, reason=reason))
+            logger.info('Copying from file {s} to {t} {reason}'.format(
+                s=src, t=target, reason=reason))
 
     elif args.action == 'read':
         s = AutoURI(src).read()

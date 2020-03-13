@@ -217,7 +217,9 @@ class URIBase(ABC):
 
         Args:
             dest_uri:
-                Target URI
+                Target URI.
+                If it's an explicit directory with slash (or os.sep) then
+                make it a file URI by suffixing self.basename.
             no_lock:
                 Do not use a locking mechanism
             no_checksum:
@@ -241,6 +243,10 @@ class URIBase(ABC):
                         md5 not found but matched file size and mtime is not newer
         """
         d = AutoURI(dest_uri)
+        sep = d.__class__.get_path_sep()
+        if d._uri.endswith(sep):
+            print(d._uri.rstrip(sep), sep, self.basename)
+            d = AutoURI(sep.join([d._uri.rstrip(sep), self.basename]))
 
         with d.get_lock(no_lock=no_lock) as lock:
             if not no_checksum:
