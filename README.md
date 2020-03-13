@@ -149,15 +149,13 @@ login XXXXXXXX
 password abcdefghijklmnop         
 ```
 
+
 ## Using `gsutil` for direct trasnfer between GCS and S3
 
 Autouri can use `gsutil` CLI for a direct file transfer between S3 and GCS. Define `--use-gsutil-for-s3` in command line arguments or use `GCSURI.init_gcsuri(use_gsutil_for_s3=True)` in Python. Otherwise, file transfer between GCS and S3 will be streamed through your local machine.
 
-`gsutil` must be configured correctly to obtain AWS credentials.
-```
-$ aws configure  # make sure that you already authenticated for AWS
-$ gsutil config  # write auth info on ~/.boto
-```
+`gsutil` will take AWS credentials from `~/.aws/credentials` file, which is already generated in [Authentication](#authentication).
+
 
 ## GCS/S3 bucket policies
 
