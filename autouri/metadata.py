@@ -3,7 +3,7 @@
 from binascii import hexlify
 from base64 import b64decode
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil.parser import parse as parse_timestamp
 from dateutil.tz import tzutc
 
@@ -12,7 +12,7 @@ URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
 
 
 def get_seconds_from_epoch(timestamp: str) -> float:
-    utc_t = parse_timestamp(timestamp)
+    utc_t = parse_timestamp(timestamp).astimezone(timezone.utc)
     utc_epoch = datetime(1970, 1, 1, tzinfo=tzutc())
     return (utc_t - utc_epoch).total_seconds()
 
