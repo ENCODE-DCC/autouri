@@ -63,7 +63,7 @@ jobs:
             gcloud config set project ${GOOGLE_PROJECT_ID}
             aws configure set ${AWS_ACCESS_KEY_ID} ${AWS_ACCESS_KEY_SECRET}
 
-            # the following buckets must be public:
+            # make this public:
             #    gs://encode-test-autouri/tmp_url 
 
             # run pytest
@@ -72,7 +72,8 @@ jobs:
                    --gcp-private-key-file tmp_key.json \
                    --s3-root s3://encode-test-autouri/tmp \
                    --gcs-root gs://encode-test-autouri/tmp \
-                   --gcs-root-url gs://encode-test-autouri/tmp_url \
+                   --gcs-root-url gs://encode-test-autouri/tmp_url
+
             rm -f tmp_key.json
 
  
