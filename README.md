@@ -112,9 +112,9 @@ optional arguments:
 ## Requirements
 
 - Python >= 3.6
-    - Packages: `requests` and `filelock`
+    - Packages: `requests`, `dateparser` and `filelock`
         ```bash
-        $ pip3 install requests filelock
+        $ pip3 install requests dateparser filelock
         ```
 
 - Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/quickstarts) to get CLIs (`gcloud` and `gsutil`).
