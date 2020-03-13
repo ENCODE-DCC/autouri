@@ -62,7 +62,8 @@ jobs:
             echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
             gcloud auth activate-service-account --project=${GOOGLE_PROJECT_ID} --key-file=tmp_key.json
             gcloud config set project ${GOOGLE_PROJECT_ID}
-            aws configure set ${AWS_ACCESS_KEY_ID} ${AWS_ACCESS_KEY_SECRET}
+            aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
 
             # make this public:
             #    gs://encode-test-autouri/tmp_url 
