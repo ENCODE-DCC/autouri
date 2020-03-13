@@ -230,14 +230,7 @@ def test_abspath_write(local_test_path):
 
 def test_abspath_write_no_permission():
     try:
-        u = AbsPath('/x.tmp')
-        u.write('test')
-        assert False
-    except PermissionError:
-        pass
-
-    try:
-        u = AbsPath('/x.tmp')
+        u = AbsPath('/test-permission-denied/x.tmp')
         u.write('test')
         assert False
     except PermissionError:
