@@ -13,7 +13,15 @@ from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class S3URILock(BaseFileLock):
-    """Unstable locking without using S3 Object Lock.
+    """Locking without using S3 Object Lock.
+    Without S3 object lock, boto3's put_object(), which is used for _write() and _cp() in this module,
+    does not ensure consistency of multiple write operations at the same time.
+    It overwrites for all write requests but the last object written.
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.put_object
+
+    To make this lock as stable as possible, this module uses .lock file with id(self) written on it.
+    This module first checks if .lock does not exist, then tries to write .lock with id(self).
+    It immediately checks if written .lock has the same id(self).
     """
     def __init__(
         self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
@@ -26,11 +34,16 @@ class S3URILock(BaseFileLock):
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
+        """Unlike GCSURI, this module does not use S3 Object locking.
+        This will write id(self) on a .lock file.
+        """
         u = S3URI(self._lock_file)
         try:
             if not u.exists:
-                u.write('', no_lock=True)
-                self._lock_file_fd = id(self)
+                str_id = str(id(self))
+                u.write(str_id, no_lock=True)
+                if u.read() == str_id:
+                    self._lock_file_fd = id(self)
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
             if status in (403, 404):
