@@ -132,22 +132,32 @@ optional arguments:
 
 ## Authentication
 
-GCS: Use `gcloud` CLI. You will be asked to enter credential information of your Google account or redirected to authenticate on a web browser.
-```
-$ gcloud init
-```
+- GCS: Use `gcloud` CLI.
+    - Using end-user credential: You will be asked to enter credential information of your Google account.
+        ```
+        $ gcloud init 
+        ```
+    - Using service account credential: If you use a service account and a JSON key file associated with it.
+        ```
+        $ gcloud auth activate-service-account --key-file=[YOUR_JSON_KEY.json]
+        $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
+        ```
+    Then set your default project.
+    ```
+    $ gcloud config set project [YOUR_GCP_PROJECT_ID]
+    ```
 
-S3: Use `aws` CLI. You will be asked to enter credential information of your AWS account.
-```
-$ aws configure
-```
+- S3: Use `aws` CLI. You will be asked to enter credential information of your AWS account.
+    ```
+    $ aws configure
+    ```
 
-URL: Use `~/.netrc` file to get access to private URLs. Example `.netrc` file. You can define credential per site.
-```
-machine www.encodeproject.org
-login XXXXXXXX
-password abcdefghijklmnop         
-```
+- URL: Use `~/.netrc` file to get access to private URLs. Example `.netrc` file. You can define credential per site.
+    ```
+    machine www.encodeproject.org
+    login XXXXXXXX
+    password abcdefghijklmnop         
+    ```
 
 
 ## Using `gsutil` for direct trasnfer between GCS and S3
@@ -157,7 +167,7 @@ Autouri can use `gsutil` CLI for a direct file transfer between S3 and GCS. Defi
 `gsutil` will take AWS credentials from `~/.aws/credentials` file, which is already generated in [Authentication](#authentication).
 
 
-## GCS/S3 bucket policies
+## GCS/S3 bucket configuration
 
 Autouri best works with default bucket configuration for both cloud storages.
 
