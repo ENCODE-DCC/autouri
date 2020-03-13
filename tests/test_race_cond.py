@@ -61,7 +61,7 @@ def test_race_cond_autouri_write(
     tests = (
         (local_test_path, 50),
         (gcs_test_path, 10),
-        (s3_test_path, 5),
+        (s3_test_path, 10),
     )
     # (local_test_path, gcs_test_path, s3_test_path,):
     for (test_path, nth) in tests:
