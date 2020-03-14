@@ -77,11 +77,15 @@ jobs:
             # run pytest
             pytest --ci-prefix ${CIRCLE_WORKFLOW_ID} \
                    --gcp-private-key-file tmp_key.json \
-                   --s3-root s3://encode-test-autouri/tmp \
-                   --gcs-root gs://encode-test-autouri/tmp \
-                   --gcs-root-url gs://encode-test-autouri/tmp_url
+                   --s3-root ${S3_ROOT} \
+                   --gcs-root ${GCS_ROOT} \
+                   --gcs-root-url ${GCS_ROOT_URL}
 
+            # clean up
             rm -f tmp_key.json
+            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID}
 
  
 # Define workflow here
