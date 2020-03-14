@@ -1,5 +1,6 @@
 """URIMetadata and helper functions for metadata
 """
+import warnings
 from binascii import hexlify
 from base64 import b64decode
 from collections import namedtuple
@@ -19,7 +20,9 @@ def get_seconds_from_epoch(timestamp: str) -> float:
     utc_epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     utc_t = None
     try:
-        utc_t = dateutil_parse(timestamp)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            utc_t = dateutil_parse(timestamp)
     except:
         pass
     if utc_t is None or utc_t.tzname() not in ('UTC', 'Z'):
