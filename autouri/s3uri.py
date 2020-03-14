@@ -2,6 +2,7 @@
     S3 Object versioning must be turned off
 """
 import requests
+import time
 from boto3 import client
 from botocore.exceptions import ClientError
 from filelock import BaseFileLock
@@ -21,12 +22,14 @@ class S3URILock(BaseFileLock):
 
     To make this lock as stable as possible, this module uses .lock file with id(self) written on it.
     This module first checks if .lock does not exist, then tries to write .lock with id(self).
-    It immediately checks if written .lock has the same id(self).
+    It waits for a short time (self._lock_read_delay) and checks if written .lock has the same id(self).
+    self._lock_read_delay is set as poll_interval/10.
     """
     def __init__(
         self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
+        self._lock_read_delay = self._poll_interval/10.0
 
     def acquire(self, timeout=None, poll_intervall=5.0):
         """To use self._poll_interval instead of poll_intervall in args.
@@ -38,12 +41,13 @@ class S3URILock(BaseFileLock):
         This will write id(self) on a .lock file.
         """
         u = S3URI(self._lock_file)
+        str_id = str(id(self))
         try:
             if not u.exists:
-                str_id = str(id(self))
                 u.write(str_id, no_lock=True)
-                if u.read() == str_id:
-                    self._lock_file_fd = id(self)
+                time.sleep(self._lock_read_delay)
+            if u.read() == str_id:
+                self._lock_file_fd = id(self)
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
             if status in (403, 404):
