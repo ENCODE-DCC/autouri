@@ -179,6 +179,3 @@ S3 (`s3://bucket-name`)
   - Object versioning must be turned off.
 
 
-## Known issues
-
-Race condition is tested with multiple threads trying to write on the same file. File locking mechanism is based on [filelock](https://github.com/benediktschmitt/py-filelock). Such file locking is stable on local/GCS files but rather unstable on S3 (tested with 5 threads).
