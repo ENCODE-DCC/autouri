@@ -6,7 +6,7 @@ from collections import namedtuple
 from datetime import datetime, timezone
 from dateparser import parse as dateparser_parse
 from dateutil.parser import parse as dateutil_parse
-from dateutil.tz import tzlocal
+from dateutil.tz import tzlocal, tzutc
 
 
 URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
@@ -17,12 +17,14 @@ def get_seconds_from_epoch(timestamp: str) -> float:
     (e.g. PDT, EDT) correctly, then use dateparser.parse instead.
     """
     utc_epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-
-    utc_t = dateutil_parse(timestamp)
-    if utc_t.tzinfo is None or utc_t.tzinfo == tzlocal():
+    utc_t = None
+    try:
+        utc_t = dateutil_parse(timestamp)
+    except:
+        pass
+    if utc_t is None or utc_t.tzname() not in ('UTC', 'Z'):
         utc_t = dateparser_parse(timestamp)
     utc_t = utc_t.astimezone(timezone.utc)
-
     return (utc_t - utc_epoch).total_seconds()
 
 
