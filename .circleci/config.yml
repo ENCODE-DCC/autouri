@@ -81,6 +81,9 @@ jobs:
                    --gcs-root ${GCS_ROOT} \
                    --gcs-root-url ${GCS_ROOT_URL}
 
+            # to use gsutil
+            export BOTO_CONFIG=/dev/null
+
             # clean up
             rm -f tmp_key.json
             gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID}
