@@ -540,22 +540,26 @@ class AutoURI(URIBase):
                 return
 
     def _get_lock(self, timeout=None, poll_interval=None):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def read(self, byte=False):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _write(self, s):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _rm(self):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _cp(self, dest_uri):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _cp_from(self, src_uri):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
+
+    def __raise_value_error(self):
+        raise ValueError('Not a valid URI?. {f}'.format(f=self._uri))
+
