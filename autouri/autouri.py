@@ -10,11 +10,8 @@ from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 from .metadata import URIMetadata
 
 
-logging.basicConfig(level=logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', style='{')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger('autouri')
-logger.setFormater(formatter)
-
 logger_filelock().setLevel(logging.CRITICAL)
 
 
