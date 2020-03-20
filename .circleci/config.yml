@@ -6,7 +6,7 @@ defaults: &defaults
 
 machine_defaults: &machine_defaults
   machine:
-    image: ubuntu-1604:201903-01 #circleci/python:3.7.4-buster
+    image: ubuntu-1604:201903-01
   working_directory: ~/autouri
 
 
