@@ -133,7 +133,7 @@ optional arguments:
 ## Authentication
 
 - GCS: Use `gcloud` CLI.
-    - Using end-user credential: You will be asked to enter credential information of your Google account.
+    - Using end-user credentials: You will be asked to enter credentials information of your Google account.
         ```
         $ gcloud init 
         ```
