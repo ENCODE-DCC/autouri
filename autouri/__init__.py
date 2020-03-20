@@ -71,10 +71,11 @@ def parse_args():
 
     p_loc = subparser.add_parser(
         'loc',
-        help='type(target_dir).localize(src): Localize source on target directory (class)',
+        help='AutoURI(src).localize_on(target): Localize source on target directory '
+             'Target directory must end with directory separator',
         parents=[parent_src, parent_target, parent_cp])
     p_loc.add_argument('--recursive', action='store_true',
-        help='Recursively localize source into target class.')
+        help='Recursively localize source into target directory.')
 
     p_presign = subparser.add_parser(
         'presign',
@@ -150,11 +151,10 @@ def main():
         logger.info('Deleted {s}'.format(s=src))
 
     elif args.action == 'loc':
-        _, localized = AutoURI(target).__class__.localize(
-            src,
+        _, localized = AutoURI(src).localize_on(
+            target,
             recursive=args.recursive,
-            make_md5_file=args.make_md5_file,
-            loc_prefix=target)
+            make_md5_file=args.make_md5_file)
         if localized:
             logger.info('Localized {s} on {t}'.format(s=src, t=target))
         else:

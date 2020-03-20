@@ -299,6 +299,14 @@ class URIBase(ABC):
         else:
             return self._get_lock(timeout=timeout, poll_interval=poll_interval)
 
+    def localize_on(self, loc_prefix, recursive=False, make_md5_file=False, depth=0) -> Tuple[str, bool]:
+        """Wrapper for classmethod localize().
+        Localizes self on target directory loc_prefix.
+        """
+        return AutoURI.localize(
+            src_uri=self, recursive=recursive, make_md5_file=make_md5_file,
+            loc_prefix=loc_prefix, depth=depth)
+
     @abstractmethod
     def _get_lock(self, timeout=None, poll_interval=None) -> BaseFileLock:
         """Locking mechanism with "with" context.
