@@ -12,8 +12,9 @@ from .metadata import URIMetadata
 
 logging.basicConfig(level=logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', style='{')
-logger.setFormater(formatter)
 logger = logging.getLogger('autouri')
+logger.setFormater(formatter)
+
 logger_filelock().setLevel(logging.CRITICAL)
 
 
