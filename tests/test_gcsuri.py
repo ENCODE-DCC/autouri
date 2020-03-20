@@ -126,7 +126,6 @@ def test_gcsuri_md5_file_uri(gcs_v6_txt):
     assert GCSURI(gcs_v6_txt + URIBase.MD5_FILE_EXT).uri == gcs_v6_txt + URIBase.MD5_FILE_EXT
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_gcsuri_cp_url(
     gcs_v6_txt,
     url_test_path) -> 'AutoURI':
@@ -139,7 +138,8 @@ def test_gcsuri_cp_url(
 
     for test_path in (url_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
-        _, ret = u.cp(u_dest)
+        with pytest.raises(ReadOnlyStorageError):
+            _, ret = u.cp(u_dest)
 
 
 def test_gcsuri_cp(

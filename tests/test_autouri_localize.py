@@ -19,7 +19,6 @@ from .files import (
     recurse_raise_if_uri_not_exist)
 
 
-@pytest.mark.xfail(raises=AutoURIRecursionError)
 def test_localize_self_ref(
         local_test_path,
         gcs_j1_json_self_ref,
@@ -43,10 +42,11 @@ def test_localize_self_ref(
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
 
-        loc_uri, localized = AbsPath.localize(
-            u_j1_json,
-            recursive=True,
-            loc_prefix=loc_prefix_)
+        with pytest.raises(AutoURIRecursionError):
+            loc_uri, localized = AbsPath.localize(
+                u_j1_json,
+                recursive=True,
+                loc_prefix=loc_prefix_)
 
 
 def test_localize_mixed(
