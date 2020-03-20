@@ -133,11 +133,11 @@ optional arguments:
 ## Authentication
 
 - GCS: Use `gcloud` CLI.
-    - Using end-user credentials: You will be asked to enter credentials information of your Google account.
+    - Using end-user credentials: You will be asked to enter credentials of your Google account.
         ```
         $ gcloud init 
         ```
-    - Using service account credential: If you use a service account and a JSON key file associated with it.
+    - Using service account credentials: If you use a service account and a JSON key file associated with it.
         ```
         $ gcloud auth activate-service-account --key-file=[YOUR_JSON_KEY.json]
         $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
@@ -147,7 +147,7 @@ optional arguments:
     $ gcloud config set project [YOUR_GCP_PROJECT_ID]
     ```
 
-- S3: Use `aws` CLI. You will be asked to enter credential information of your AWS account.
+- S3: Use `aws` CLI. You will be asked to enter credentials of your AWS account.
     ```
     $ aws configure
     ```
