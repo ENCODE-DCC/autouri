@@ -94,6 +94,7 @@ jobs:
  
 # Define workflow here
 workflows:
+  version: 2
   build_workflow:
     jobs:
       - pytest
