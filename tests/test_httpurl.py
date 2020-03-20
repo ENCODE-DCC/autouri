@@ -145,7 +145,6 @@ def test_httpurl_md5_file_uri(url_v6_txt):
     assert HTTPURL(url_v6_txt + URIBase.MD5_FILE_EXT).uri == url_v6_txt + URIBase.MD5_FILE_EXT
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_httpurl_cp_url(
     url_v6_txt,
     url_test_path) -> 'AutoURI':
@@ -158,7 +157,9 @@ def test_httpurl_cp_url(
 
     for test_path in (url_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_httpurl_cp', basename))
-        _, ret = u.cp(u_dest)
+
+        with pytest.raises(ReadOnlyStorageError):
+            _, ret = u.cp(u_dest)
 
 
 def test_httpurl_cp(

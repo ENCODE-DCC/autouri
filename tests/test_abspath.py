@@ -121,7 +121,6 @@ def test_abspath_md5_file_uri(local_v6_txt):
     assert AbsPath(local_v6_txt + URIBase.MD5_FILE_EXT).uri == local_v6_txt + URIBase.MD5_FILE_EXT
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_abspath_cp_url(
     local_v6_txt,
     url_test_path) -> 'AutoURI':
@@ -134,7 +133,8 @@ def test_abspath_cp_url(
 
     for test_path in (url_test_path, ):
         u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
-        _, ret = u.cp(u_dest)
+        with pytest.raises(ReadOnlyStorageError):
+            _, ret = u.cp(u_dest)
 
 
 def test_abspath_cp(
@@ -229,12 +229,9 @@ def test_abspath_write(local_test_path):
 
 
 def test_abspath_write_no_permission():
-    try:
-        u = AbsPath('/test-permission-denied/x.tmp')
+    u = AbsPath('/test-permission-denied/x.tmp')
+    with pytest.raises(PermissionError):
         u.write('test')
-        assert False
-    except PermissionError:
-        pass
 
 
 def test_abspath_rm(local_test_path):

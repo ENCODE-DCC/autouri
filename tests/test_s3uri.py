@@ -127,7 +127,6 @@ def test_s3uri_md5_file_uri(s3_v6_txt):
     assert S3URI(s3_v6_txt + URIBase.MD5_FILE_EXT).uri == s3_v6_txt + URIBase.MD5_FILE_EXT
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_s3uri_cp_url(
     s3_v6_txt,
     url_test_path) -> 'AutoURI':
@@ -140,7 +139,9 @@ def test_s3uri_cp_url(
 
     for test_path in (url_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_s3uri_cp', basename))
-        _, ret = u.cp(u_dest)
+
+        with pytest.raises(ReadOnlyStorageError):
+            _, ret = u.cp(u_dest)
 
 
 def test_s3uri_cp(
@@ -293,12 +294,9 @@ def test_s3uri_get_presigned_url(s3_v6_txt):
     assert u_url.is_valid and u_url.read() == v6_txt_contents()
     time.sleep(5)
     # should expire in 2 seconds
-    try:        
-        s = u_url.read()
-        assert False
-    except HTTPError:
+    with pytest.raises(HTTPError):
         # forbidden since it's already expired
-        pass
+        s = u_url.read()
 
 
 # classmethods
