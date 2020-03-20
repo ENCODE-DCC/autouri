@@ -1,3 +1,6 @@
+version: 2
+
+
 defaults: &defaults
   machine: 
     image: circleci/classic:latest
@@ -50,8 +53,6 @@ make_root_only_dir: &make_root_only_dir
     sudo chmod -w /test-permission-denied
 
 
-# Define jobs here
-version: 2
 jobs:
   pytest:
     <<: *machine_defaults
