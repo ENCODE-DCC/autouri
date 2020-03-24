@@ -106,8 +106,17 @@ class AbsPath(URIBase):
     def _cp_from(self, src_uri):
         return False
 
-    def get_mapped_url(self) -> Optional[str]:
-        for k, v in AbsPath.MAP_PATH_TO_URL.items():
+    def get_mapped_url(self, map_path_to_url=None) -> Optional[str]:
+        """
+        Args:
+            map_path_to_url:
+                dict with k, v where k is a path prefix and v is a URL prefix
+                k will be replaced with v.
+                If not given, defaults to use class constant AbsPath.MAP_PATH_TO_URL
+        """
+        if map_path_to_url is None:
+            map_path_to_url = AbsPath.MAP_PATH_TO_URL
+        for k, v in map_path_to_url.items():
             if k and self._uri.startswith(k):
                 return self._uri.replace(k, v, 1)
         return None
