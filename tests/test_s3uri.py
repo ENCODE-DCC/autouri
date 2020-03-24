@@ -299,6 +299,12 @@ def test_s3uri_get_presigned_url(s3_v6_txt):
         s = u_url.read()
 
 
+def test_s3uri_get_public_url(s3_v6_txt):
+    url = S3URI(s3_v6_txt).get_public_url()
+    u_url = HTTPURL(url)
+    assert u_url.is_valid and u_url.read() == v6_txt_contents()
+
+
 # classmethods
 def test_s3uri_get_path_sep() -> str:
     assert S3URI.get_path_sep() == os.path.sep

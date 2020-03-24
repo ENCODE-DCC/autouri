@@ -312,6 +312,12 @@ def test_gcsuri_get_presigned_url(gcs_v6_txt, gcp_private_key_file):
     # assert u_url.read() != v6_txt_contents()
 
 
+def test_gcsuri_get_public_url(gcs_v6_txt):
+    url = GCSURI(gcs_v6_txt).get_public_url()
+    u_url = HTTPURL(url)
+    assert u_url.is_valid and u_url.read() == v6_txt_contents()
+
+
 # classmethods
 def test_gcsuri_get_path_sep() -> str:
     assert GCSURI.get_path_sep() == os.path.sep
