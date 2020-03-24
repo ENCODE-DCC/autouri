@@ -236,16 +236,16 @@ def test_httpurl_cp(
         u_dest.rm()
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_httpurl_write(url_test_path):
     u = HTTPURL(url_test_path + '/test_httpurl_write.tmp')
-    u.write('test')
+    with pytest.raises(ReadOnlyStorageError):
+        u.write('test')
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_httpurl_rm(url_test_path):
     u = HTTPURL(url_test_path + '/test_httpurl_rm.tmp')
-    u.rm()
+    with pytest.raises(ReadOnlyStorageError):
+        u.rm()
 
 
 def test_httpurl_get_metadata(url_v6_txt, v6_txt_size, v6_txt_md5_hash):
@@ -297,7 +297,6 @@ def test_httpurl_get_loc_prefix() -> str:
     assert HTTPURL.get_loc_prefix() == ''
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_httpurl_localize(
         url_test_path,
         gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt,
@@ -316,7 +315,8 @@ def test_httpurl_localize(
         # nothing should be localized actually
         # since they are already on a local storage
         # so loc_prefix directory itself shouldn't be created
-        loc_uri, localized = HTTPURL.localize(
-            u_j1_json,
-            recursive=False,
-            loc_prefix=loc_prefix_)
+        with pytest.raises(ReadOnlyStorageError):
+            loc_uri, localized = HTTPURL.localize(
+                u_j1_json,
+                recursive=False,
+                loc_prefix=loc_prefix_)
