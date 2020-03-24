@@ -31,11 +31,15 @@ def pytest_addoption(parser):
     parser.addoption(
         '--s3-root', default='s3://encode-test-autouri/tmp',
         help='S3 root path for CI test. '
-             'This S3 bucket must be configured without versioning.'
+             'This S3 bucket must be configured without versioning. '
+             'Also, it must be publicly accessible '
+             '(read access for everyone is enough for testing).'
     )
     parser.addoption(
         '--gcs-root', default='gs://encode-test-autouri/tmp',
         help='GCS root path for CI test. '
+             'This GCS bucket must be publicly accessible '
+             '(read access for everyone is enough for testing).'
     )
     parser.addoption(
         '--gcs-root-url', default='gs://encode-test-autouri/tmp_url',
