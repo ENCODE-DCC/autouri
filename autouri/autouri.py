@@ -233,7 +233,9 @@ class URIBase(ABC):
                 hash then md5 file will not be created.
 
         Returns:
-            Tuple of (copy on destination, rc)
+            Tuple of (s, rc)
+                s:
+                    URI string of copy on destination
                 rc:
                     0:
                         made a copy
