@@ -273,7 +273,7 @@ class URIBase(ABC):
                     raise Exception(
                         'cp failed. src: {s} dest: {d}'.format(
                             s=str(self), d=str(d)))
-        return d, 0
+        return d._uri, 0
 
     def write(self, s, no_lock=False):
         """Write string/bytes to file. It is protected by a locking mechanism.
