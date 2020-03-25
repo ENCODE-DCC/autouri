@@ -406,7 +406,8 @@ class URIBase(ABC):
         return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
 
     @classmethod
-    def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None, depth=0) -> Tuple[str, bool]:
+    def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None,
+                 return_flag=False, depth=0) -> Tuple[str, bool]:
         """Localize a source URI on this URI class (cls).
 
         Recursive localization is supported for the following file extensions:
@@ -429,29 +430,40 @@ class URIBase(ABC):
                 assuming that you have write permission on target's directory and
                 its subdirectories recursively.
             loc_prefix:
-                If defined, use it instead of cls.get_loc_prefix()                
+                If defined, use it instead of cls.get_loc_prefix()
+            return_flag:
+                Returns a tuple of (localized uri string, flag)
+                instead of localized uri string only
+                    See "Returns" section for details about flag
             depth:
                 To count recursion depth.
         Returns:
             loc_uri:
                 Localized URI STRING (not a AutoURI instance) since it should be used
                 for external function as a callback function.
-            localized:
-                Whether file is ACTUALLY localized on this cls's storage.
-                ACTUALLY means making a (possibly modified) copy of the original file
-                on this cls' storage (on loc_prefix).
-                This flag includes the following two cases:
-                    modified:
-                        file contents are modified during recursive localization
-                        so localized file is suffixed with 
-                        source's storage type. e.g. .s3, .gcs, and .local
-                    but not modified:
-                        file contents are not modified so localized file is not suffixed
-                        and hence will keep the original file basename
+            flag: (only if return_flag is on)
+                Whether file is modified or localized on a different storage.
+                "modified" means:
+                    file contents are modified during recursive localization
+                    so localized file is suffixed with 
+                    source's storage type. e.g. .s3, .gcs, and .local
+                    not modified:
+                "localized on a different storage" means:
+                    file contents are NOT modified so localized file is not suffixed
+                    and hence will keep the original file basename
+                    but localiziation actually happened
+                Otherwise, this flag will be False, which means that localization didn't
+                happen because file's contents didn't change
+                and it exists on the same storage so there is no need for localization.
+                In this case, loc_uri will be identical to self._uri.
         """
         src_uri = AutoURI(src_uri)
         if not src_uri.is_valid:
-            return src_uri._uri, False
+            if return_flag:
+                return src_uri._uri, False
+            else:
+                return src_uri._uri
+
         if depth >= AutoURI.LOC_RECURSION_DEPTH_LIMIT:
             raise AutoURIRecursionError(
                 'Maximum recursion depth {m} exceeded. '
@@ -478,7 +490,7 @@ class URIBase(ABC):
             # use cls.localize() itself as a callback fnc in recursion
             fnc_loc = lambda x: cls.localize(
                  x, recursive=recursive, make_md5_file=make_md5_file, loc_prefix=loc_prefix,
-                 depth=depth + 1)
+                 return_flag=True, depth=depth + 1)
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
                 if src_uri.ext == ext:
                     # read source contents for recursive localization
@@ -502,7 +514,10 @@ class URIBase(ABC):
         else:
             loc_uri = src_uri._uri
 
-        return loc_uri, modified or on_different_storage
+        if return_flag:
+            return loc_uri, modified or on_different_storage
+        else:
+            return loc_uri
 
     @staticmethod
     def init_uribase(
