@@ -138,21 +138,22 @@ class AbsPath(URIBase):
         If target already exists delete it and create a link.
 
         Args:
-            target: target file absolute path.
+            target:
+                Target file's absolute path or URI object.
+            force:
+                Delete target file (or link) if it exists
         """
         target = AbsPath(target)
         if not target.is_valid:
             raise ValueError('Target path is not a valid abs path: {t}.'.format(
                 t=target.uri))
         try:
+            target.mkdir_dirname()
             os.symlink(self._uri, target._uri)
         except OSError as e:
-            if e.errno == errno.EEXIST:
-                if force:
-                    target.rm()
-                    os.symlink(self._uri, target._uri)
-                else:
-                    raise e
+            if e.errno == errno.EEXIST and force:
+                target.rm()
+                os.symlink(self._uri, target._uri)
             else:
                 raise e
 
