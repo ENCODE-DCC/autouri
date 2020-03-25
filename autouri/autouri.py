@@ -188,6 +188,7 @@ class URIBase(ABC):
     @property
     def md5_from_file(self) -> str:
         """Get md5 from a md5 file (.md5) if it exists.
+        Check md5 file is newer than the file that it is associated with
         """
         u_md5 = self.md5_file_uri
         if u_md5.is_valid:
@@ -195,13 +196,18 @@ class URIBase(ABC):
                 m_md5 = u_md5.get_metadata(skip_md5=True)
                 if m_md5.exists:
                     self_mtime = self.mtime
+                    logger.debug('md5 file exists. mt={mt}, md5_mt={md5_mt}, uri={u}'.format(
+                        mt=self_mtime,
+                        md5_mt=m_md5.mtime,
+                        u=self._uri))
                     if m_md5.mtime is not None and self_mtime is not None \
                             and m_md5.mtime >= self_mtime:
                         return u_md5.read()
             except Exception as e:
                 pass
 
-        logger.debug('Failed to get md5 hash from md5 file.')
+        logger.debug('Failed to get md5 hash from md5 file. uri={u}'.format(
+            u=self._uri))
         return None
 
     @property
@@ -210,7 +216,9 @@ class URIBase(ABC):
         """
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
-    def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
+    def cp(self, dest_uri: Union[str, 'AutoURI'],
+           no_lock=False, no_checksum=False, make_md5_file=False,
+           return_flag=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
         Check md5 hash, file name/size and last modified date if possible to prevent
         unnecessary re-uploading.
@@ -254,13 +262,28 @@ class URIBase(ABC):
             if not no_checksum:
                 # checksum (by md5, size, mdate)
                 m_dest = d.get_metadata(make_md5_file=make_md5_file)
+                logger.debug(
+                    'cp: dest metadata={m}, dest={dest}'.format(
+                        m=m_dest,
+                        dest=d.uri))
+
                 if m_dest.exists:
                     m_src = self.get_metadata()
+                    logger.debug(
+                        'cp: src metadata={m}, src={src}'.format(
+                            m=m_src,
+                            src=self._uri))
 
                     md5_matched = m_src.md5 is not None and m_dest.md5 is not None and \
                         m_src.md5 == m_dest.md5
                     if md5_matched:
-                        return d, 1
+                        logger.info(
+                            'cp: skipped due to md5_match, '
+                            'md5={md5}, src={src}, dest={dest}'.format(
+                                md5=m_src.md5,
+                                src=self._uri,
+                                dest=d.uri))
+                        return (d._uri, 1) if return_flag else d._uri 
 
                     name_matched = self.basename == d.basename
                     size_matched = m_src.size is not None and m_dest.size is not None and \
@@ -268,14 +291,26 @@ class URIBase(ABC):
                     src_is_not_newer = m_src.mtime is not None and m_dest.mtime is not None and \
                         m_src.mtime <= m_dest.mtime
                     if name_matched and size_matched and src_is_not_newer:                    
-                        return d, 2
+                        logger.info(
+                            'cp: skipped due to name_size_match, '
+                            'size={sz}, mt={mt}, src={src}, dest={dest}'.format(
+                                sz=m_src.size,
+                                mt=m_src.mtime,
+                                src=self._uri,
+                                dest=d.uri))
+                        return (d._uri, 2) if return_flag else d._uri
 
             if not self._cp(dest_uri=d):
                 if not d._cp_from(src_uri=self):
                     raise Exception(
                         'cp failed. src: {s} dest: {d}'.format(
                             s=str(self), d=str(d)))
-        return d._uri, 0
+
+        logger.info(
+            'cp: copied, src={src}, dest={dest}'.format(
+                src=self._uri,
+                dest=d.uri))
+        return (d._uri, 0) if return_flag else d._uri
 
     def write(self, s, no_lock=False):
         """Write string/bytes to file. It is protected by a locking mechanism.
@@ -307,7 +342,7 @@ class URIBase(ABC):
         """
         return AutoURI.localize(
             src_uri=self, recursive=recursive, make_md5_file=make_md5_file,
-            loc_prefix=loc_prefix, depth=depth)
+            loc_prefix=loc_prefix, return_flag=False, depth=depth)
 
     @abstractmethod
     def _get_lock(self, timeout=None, poll_interval=None) -> BaseFileLock:
@@ -459,10 +494,7 @@ class URIBase(ABC):
         """
         src_uri = AutoURI(src_uri)
         if not src_uri.is_valid:
-            if return_flag:
-                return src_uri._uri, False
-            else:
-                return src_uri._uri
+            return (src_uri._uri, False) if return_flag else src_uri._uri
 
         if depth >= AutoURI.LOC_RECURSION_DEPTH_LIMIT:
             raise AutoURIRecursionError(
@@ -514,10 +546,7 @@ class URIBase(ABC):
         else:
             loc_uri = src_uri._uri
 
-        if return_flag:
-            return loc_uri, modified or on_different_storage
-        else:
-            return loc_uri
+        return (loc_uri, modified or on_different_storage) if return_flag else loc_uri
 
     @staticmethod
     def init_uribase(
