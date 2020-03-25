@@ -1,4 +1,5 @@
 import hashlib
+import errno
 import os
 import shutil
 from filelock import SoftFileLock
@@ -26,7 +27,8 @@ class AbsPath(URIBase):
     _PATH_SEP = os.sep
 
     def __init__(self, uri, thread_id=-1):
-        uri = os.path.expanduser(uri)
+        if isinstance(uri, str):
+            uri = os.path.expanduser(uri)
         super().__init__(uri, thread_id=thread_id)
 
     @property
@@ -130,6 +132,29 @@ class AbsPath(URIBase):
                 'No permission to write on directory: {d}'.format(
                     d=self.dirname))
         return
+
+    def soft_link(self, target, force=False):
+        """Make a soft link of self on target absolute path.
+        If target already exists delete it and create a link.
+
+        Args:
+            target: target file absolute path.
+        """
+        target = AbsPath(target)
+        if not target.is_valid:
+            raise ValueError('Target path is not a valid abs path: {t}.'.format(
+                t=target.uri))
+        try:
+            os.symlink(self._uri, target._uri)
+        except OSError as e:
+            if e.errno == errno.EEXIST:
+                if force:
+                    target.rm()
+                    os.symlink(self._uri, target._uri)
+                else:
+                    raise e
+            else:
+                raise e
 
     def __calc_md5sum(self):
         """Expensive md5 calculation

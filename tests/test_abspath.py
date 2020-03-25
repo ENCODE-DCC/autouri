@@ -298,6 +298,23 @@ def test_abspath_mkdirname(local_test_path):
     assert os.path.exists(os.path.dirname(f))
 
 
+def test_abspath_soft_link(local_test_path, local_v6_txt):
+    u_src = AbsPath(local_v6_txt)
+    f = os.path.join(local_test_path, 'test_abspath_soft_link', 'v6.txt')
+    u_target = AbsPath(f)
+    u_target.mkdir_dirname()
+    u_src.soft_link(u_target)
+    assert u_target.exists and u_target.read() == v6_txt_contents()
+    assert u_src.uri == os.path.realpath(u_target.uri)
+
+    with pytest.raises(OSError):
+        # file already exists
+        u_src.soft_link(u_target)
+    # no error if force
+    u_src.soft_link(u_target, force=True)
+    u_target.rm()
+
+
 # classmethods
 def test_abspath_get_path_sep() -> str:
     assert AbsPath.get_path_sep() == os.path.sep
