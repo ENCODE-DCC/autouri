@@ -4,6 +4,7 @@ import os
 import shutil
 from filelock import SoftFileLock
 from typing import Dict, Optional, Union
+from shutil import copyfile, SameFileError
 
 from .autouri import URIBase, AutoURI, logger
 from .metadata import URIMetadata, get_seconds_from_epoch
@@ -101,7 +102,17 @@ class AbsPath(URIBase):
 
         if isinstance(dest_uri, AbsPath):            
             dest_uri.mkdir_dirname()
-            shutil.copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+            try:
+                copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+            except SameFileError as e:
+                logger.debug(
+                    'cp: ignored SameFileError. src={src}, dest={dest}'.format(
+                        src=self._uri,
+                        dest=dest_uri._uri))
+                if os.path.islink(dest_uri._uri):
+                    dest_uri._rm()
+                    copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+
             return True
         return False
 
