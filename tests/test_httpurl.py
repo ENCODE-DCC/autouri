@@ -159,7 +159,7 @@ def test_httpurl_cp_url(
         u_dest = AutoURI(os.path.join(test_path, 'test_httpurl_cp', basename))
 
         with pytest.raises(ReadOnlyStorageError):
-            _, ret = u.cp(u_dest)
+            _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_httpurl_cp(
