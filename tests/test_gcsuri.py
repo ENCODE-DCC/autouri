@@ -406,6 +406,7 @@ def test_gcsuri_localize(
         loc_uri, localized = GCSURI.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
@@ -413,6 +414,7 @@ def test_gcsuri_localize(
         loc_uri, localized = GCSURI.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
@@ -428,6 +430,7 @@ def test_gcsuri_localize(
         loc_uri, localized = GCSURI.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         expected = os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
@@ -438,6 +441,7 @@ def test_gcsuri_localize(
         loc_uri, localized = GCSURI.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         expected = os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,

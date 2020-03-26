@@ -401,6 +401,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not os.path.exists(loc_prefix)
@@ -408,6 +409,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not os.path.exists(loc_prefix)
@@ -422,6 +424,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
@@ -431,6 +434,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
