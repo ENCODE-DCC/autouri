@@ -139,7 +139,7 @@ def test_gcsuri_cp_url(
     for test_path in (url_test_path,):
         u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
         with pytest.raises(ReadOnlyStorageError):
-            _, ret = u.cp(u_dest)
+            _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_gcsuri_cp(
@@ -171,26 +171,26 @@ def test_gcsuri_cp(
             u_dest.rm()
 
         assert not u_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         assert not u_dest.exists
         # cp without lock will be tested throughly in test_race_cond.py
-        _, ret = u.cp(u_dest, no_lock=True)
+        _, ret = u.cp(u_dest, no_lock=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         # trivial: copy without checksum when target doesn't exists
         assert not u_dest.exists
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
 
         # copy without checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
         time.sleep(1)
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be larger if it's overwritten as intended        
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
@@ -198,7 +198,7 @@ def test_gcsuri_cp(
         # copy with checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be the same as old time
         assert u_dest.mtime == m_dest.mtime and u.read() == u_dest.read() and ret == 1
@@ -211,7 +211,7 @@ def test_gcsuri_cp(
         u_dest_md5_file = AutoURI(u_dest.uri + URIBase.MD5_FILE_EXT)
         if u_dest_md5_file.exists:
             u_dest_md5_file.rm()
-        _, ret = u.cp(u_dest, make_md5_file=True)
+        _, ret = u.cp(u_dest, make_md5_file=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 1
         u_dest.rm()
 
