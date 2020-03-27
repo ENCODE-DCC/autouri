@@ -315,6 +315,32 @@ def test_abspath_soft_link(local_test_path, local_v6_txt):
     u_target.rm()
 
 
+# staticmethods
+def test_abspath_get_abspath_if_exists():
+    # write a local file on CWD.
+    test_local_file_abspath = os.path.join(os.getcwd(), 'test.txt')
+    u = AbsPath(test_local_file_abspath)
+    if u.exists:
+        u.rm()
+
+    # if it doesn't exist
+    assert AbsPath.get_abspath_if_exists('test.txt') == 'test.txt'
+    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == 'test.txt'
+
+    u.write('hello-world')
+
+    # if it exists
+    assert AbsPath.get_abspath_if_exists('test.txt') == test_local_file_abspath
+    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == test_local_file_abspath
+
+    assert AbsPath.get_abspath_if_exists('tttttttttest.txt') == 'tttttttttest.txt'
+    assert AbsPath.get_abspath_if_exists(AutoURI('tttttttttest.txt')) == 'tttttttttest.txt'
+    assert AbsPath.get_abspath_if_exists('~/if-it-does-not-exist') == '~/if-it-does-not-exist'
+    assert AbsPath.get_abspath_if_exists('non-existing-file') == 'non-existing-file'
+
+    u.rm()
+
+
 # classmethods
 def test_abspath_get_path_sep() -> str:
     assert AbsPath.get_path_sep() == os.path.sep

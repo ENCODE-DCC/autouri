@@ -178,6 +178,15 @@ class AbsPath(URIBase):
         return hash_md5.hexdigest()
 
     @staticmethod
+    def get_abspath_if_exists(path):
+        if isinstance(path, URIBase):
+            path = path._uri
+        if isinstance(path, str):
+            if os.path.exists(os.path.expanduser(path)):
+                return os.path.abspath(os.path.expanduser(path))
+        return path
+
+    @staticmethod
     def init_abspath(
         loc_prefix: Optional[str]=None,
         map_path_to_url: Optional[Dict[str, str]]=None,
