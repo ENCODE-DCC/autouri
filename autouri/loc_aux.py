@@ -34,7 +34,7 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
         elif isinstance(d, list):
             for i, v in enumerate(d):
                 modified |= recurse_dict(v, fnc, lst=d,
-                                         slst_idx=i, modified=modified)
+                                         lst_idx=i, modified=modified)
         elif isinstance(d, str):
             assert(d_parent is not None or lst is not None)
             new_val, modified_ = fnc(d)

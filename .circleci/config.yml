@@ -1,0 +1,101 @@
+version: 2
+
+
+defaults: &defaults
+  machine: 
+    image: circleci/classic:latest
+  working_directory: ~/autouri
+
+
+machine_defaults: &machine_defaults
+  machine:
+    image: ubuntu-1604:201903-01
+  working_directory: ~/autouri
+
+
+install_python3: &install_python3
+  name: Install python3, pip3
+  command: |
+    sudo apt-get update && sudo apt-get install software-properties-common git wget curl -y
+    sudo add-apt-repository ppa:deadsnakes/ppa -y
+    sudo apt-get update && sudo apt-get install python3.6 -y
+    sudo wget https://bootstrap.pypa.io/get-pip.py
+    sudo python3.6 get-pip.py
+    sudo ln -s /usr/bin/python3.6 /usr/local/bin/python3
+
+
+install_py3_packages: &install_py3_packages
+  name: Install Python packages
+  command: |
+    sudo pip3 install pytest requests dateparser filelock
+    sudo pip3 install --upgrade pyasn1-modules
+
+
+install_gcs_lib: &install_gcs_lib
+  name: Install Google Cloud SDK (gcloud and gsutil) and Python API (google-cloud-storage)
+  command: |    
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+    sudo apt-get update && sudo apt-get install google-cloud-sdk -y
+    sudo pip3 install google-cloud-storage
+    
+
+install_aws_lib: &install_aws_lib
+  name: Install AWS Python API (boto3) and CLI (awscli)
+  command: |
+    sudo pip3 install boto3 awscli
+
+
+make_root_only_dir: &make_root_only_dir
+  name: Create a directory accessible by root only (to test permission-denied cases)
+  command: |
+    sudo mkdir /test-permission-denied
+    sudo chmod -w /test-permission-denied
+
+
+jobs:
+  pytest:
+    <<: *machine_defaults
+    steps:
+      - checkout
+      - run: *install_python3
+      - run: *install_py3_packages
+      - run: *install_gcs_lib
+      - run: *install_aws_lib
+      - run: *make_root_only_dir
+      - run:
+          no_output_timeout: 60m
+          command: |
+            cd tests/
+            # sign in
+            echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
+            gcloud auth activate-service-account --project=${GOOGLE_PROJECT_ID} --key-file=tmp_key.json
+            gcloud config set project ${GOOGLE_PROJECT_ID}
+            export GOOGLE_APPLICATION_CREDENTIALS="${PWD}/tmp_key.json"
+            aws configure set aws_access_key_id "${AWS_ACCESS_KEY_ID}"
+            aws configure set aws_secret_access_key "${AWS_SECRET_ACCESS_KEY}"
+
+            # run pytest
+            pytest --ci-prefix ${CIRCLE_WORKFLOW_ID} \
+                   --gcp-private-key-file tmp_key.json \
+                   --s3-root ${S3_ROOT} \
+                   --gcs-root ${GCS_ROOT} \
+                   --gcs-root-url ${GCS_ROOT_URL}
+
+            # to use gsutil
+            export BOTO_CONFIG=/dev/null
+
+            # clean up
+            rm -f tmp_key.json
+            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID}
+
+ 
+# Define workflow here
+workflows:
+  version: 2
+  build_workflow:
+    jobs:
+      - pytest
+

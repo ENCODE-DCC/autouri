@@ -89,6 +89,8 @@ class GCSURI(URIBase):
             GCS client is not thread-safe.
         _CACHED_PRESIGNED_URLS:
             Can use cached presigned URLs.
+        _GCS_PUBLIC_URL_FORMAT:
+            End point for a bucket with public access + key path
     """
     PRIVATE_KEY_FILE: str = ''
     DURATION_PRESIGNED_URL: int = 4233600
@@ -99,6 +101,7 @@ class GCSURI(URIBase):
 
     _CACHED_GCS_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
+    _GCS_PUBLIC_URL_FORMAT = 'http://storage.googleapis.com/{bucket}/{path}'
 
     _LOC_SUFFIX = '.gcs'
     _SCHEMES = ('gs://',)
@@ -327,6 +330,10 @@ class GCSURI(URIBase):
             credentials=credentials)
         cache[self._uri] = url
         return url
+
+    def get_public_url(self) -> str:
+        bucket, path = self.get_bucket_path()
+        return GCSURI._GCS_PUBLIC_URL_FORMAT.format(bucket=bucket, path=path)
 
     @staticmethod
     def get_gcs_client(thread_id) -> storage.Client:

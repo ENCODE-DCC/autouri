@@ -2,6 +2,7 @@
     S3 Object versioning must be turned off
 """
 import requests
+import time
 from boto3 import client
 from botocore.exceptions import ClientError
 from filelock import BaseFileLock
@@ -13,12 +14,22 @@ from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 
 class S3URILock(BaseFileLock):
-    """Unstable locking without using S3 Object Lock.
+    """Locking without using S3 Object Lock.
+    Without S3 object lock, boto3's put_object(), which is used for _write() and _cp() in this module,
+    does not ensure consistency of multiple write operations at the same time.
+    It overwrites for all write requests but the last object written.
+    https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html#S3.Client.put_object
+
+    To make this lock as stable as possible, this module uses .lock file with id(self) written on it.
+    This module first checks if .lock does not exist, then tries to write .lock with id(self).
+    It waits for a short time (self._lock_read_delay) and checks if written .lock has the same id(self).
+    self._lock_read_delay is set as poll_interval/10.
     """
     def __init__(
         self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
+        self._lock_read_delay = self._poll_interval/10.0
 
     def acquire(self, timeout=None, poll_intervall=5.0):
         """To use self._poll_interval instead of poll_intervall in args.
@@ -26,10 +37,16 @@ class S3URILock(BaseFileLock):
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
+        """Unlike GCSURI, this module does not use S3 Object locking.
+        This will write id(self) on a .lock file.
+        """
         u = S3URI(self._lock_file)
+        str_id = str(id(self))
         try:
             if not u.exists:
-                u.write('', no_lock=True)
+                u.write(str_id, no_lock=True)
+                time.sleep(self._lock_read_delay)
+            if u.read() == str_id:
                 self._lock_file_fd = id(self)
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
@@ -58,11 +75,14 @@ class S3URI(URIBase):
     Protected class constants:
         _CACHED_BOTO3_CLIENT_PER_THREAD:
         _CACHED_PRESIGNED_URLS:
+        _S3_PUBLIC_URL_FORMAT:
+            End point for a bucket with public access + key path
     """
     DURATION_PRESIGNED_URL: int = 4233600
 
     _CACHED_BOTO3_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
+    _S3_PUBLIC_URL_FORMAT = 'http://{bucket}.s3.amazonaws.com/{path}'
 
     _LOC_SUFFIX = '.s3'
     _SCHEMES = ('s3://',)
@@ -231,6 +251,10 @@ class S3URI(URIBase):
             ExpiresIn=duration)
         cache[self._uri] = url
         return url
+
+    def get_public_url(self) -> str:
+        bucket, path = self.get_bucket_path()
+        return S3URI._S3_PUBLIC_URL_FORMAT.format(bucket=bucket, path=path)
 
     @staticmethod
     def get_boto3_client(thread_id=-1) -> client:

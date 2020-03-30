@@ -1,3 +1,10 @@
+[![CircleCI](https://circleci.com/gh/ENCODE-DCC/autouri.svg?style=svg)](https://circleci.com/gh/ENCODE-DCC/autouri)
+
+> **IMPORTANT**: If you use `--use-gsutil-for-s3` or `GCSURI.USE_GSUTIL_FOR_S3` then you need to update your `gsutil`. This flag allows a direct transfer between `gs://` and `s3://`. This requires `gsutil` >= 4.47. See this [issue](https://github.com/GoogleCloudPlatform/gsutil/issues/935) for details.
+```bash
+$ pip install gsutil --upgrade
+```
+
 # Autouri
 
 ## Introduction
@@ -110,9 +117,9 @@ optional arguments:
 ## Requirements
 
 - Python >= 3.6
-    - Packages: `requests` and `filelock`
+    - Packages: `requests`, `dateparser` and `filelock`
         ```bash
-        $ pip3 install requests filelock
+        $ pip3 install requests dateparser filelock
         ```
 
 - Install [Google Cloud SDK](https://cloud.google.com/sdk/docs/quickstarts) to get CLIs (`gcloud` and `gsutil`).
@@ -130,34 +137,42 @@ optional arguments:
 
 ## Authentication
 
-GCS: Use `gcloud` CLI. You will be asked to enter credential information of your Google account or redirected to authenticate on a web browser.
-```
-$ gcloud init
-```
+- GCS: Use `gcloud` CLI.
+    - Using end-user credentials: You will be asked to enter credentials of your Google account.
+        ```
+        $ gcloud init 
+        ```
+    - Using service account credentials: If you use a service account and a JSON key file associated with it.
+        ```
+        $ gcloud auth activate-service-account --key-file=[YOUR_JSON_KEY.json]
+        $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
+        ```
+    Then set your default project.
+    ```
+    $ gcloud config set project [YOUR_GCP_PROJECT_ID]
+    ```
 
-S3: Use `aws` CLI. You will be asked to enter credential information of your AWS account.
-```
-$ aws configure
-```
+- S3: Use `aws` CLI. You will be asked to enter credentials of your AWS account.
+    ```
+    $ aws configure
+    ```
 
-URL: Use `~/.netrc` file to get access to private URLs. Example `.netrc` file. You can define credential per site.
-```
-machine www.encodeproject.org
-login XXXXXXXX
-password abcdefghijklmnop         
-```
+- URL: Use `~/.netrc` file to get access to private URLs. Example `.netrc` file. You can define credential per site.
+    ```
+    machine www.encodeproject.org
+    login XXXXXXXX
+    password abcdefghijklmnop         
+    ```
+
 
 ## Using `gsutil` for direct trasnfer between GCS and S3
 
 Autouri can use `gsutil` CLI for a direct file transfer between S3 and GCS. Define `--use-gsutil-for-s3` in command line arguments or use `GCSURI.init_gcsuri(use_gsutil_for_s3=True)` in Python. Otherwise, file transfer between GCS and S3 will be streamed through your local machine.
 
-`gsutil` must be configured correctly to obtain AWS credentials.
-```
-$ aws configure  # make sure that you already authenticated for AWS
-$ gsutil config  # write auth info on ~/.boto
-```
+`gsutil` will take AWS credentials from `~/.aws/credentials` file, which is already generated in [Authentication](#authentication).
 
-## GCS/S3 bucket policies
+
+## GCS/S3 bucket configuration
 
 Autouri best works with default bucket configuration for both cloud storages.
 
@@ -169,6 +184,3 @@ S3 (`s3://bucket-name`)
   - Object versioning must be turned off.
 
 
-## Known issues
-
-Race condition is tested with multiple threads trying to write on the same file. File locking mechanism is based on [filelock](https://github.com/benediktschmitt/py-filelock). Such file locking is stable on local/GCS files but rather unstable on S3 (tested with 5 threads).

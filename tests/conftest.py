@@ -31,11 +31,24 @@ def pytest_addoption(parser):
     parser.addoption(
         '--s3-root', default='s3://encode-test-autouri/tmp',
         help='S3 root path for CI test. '
-             'This S3 bucket must be configured without versioning.'
+             'This S3 bucket must be configured without versioning. '
+             'Make it publicly accessible. '
+             'Read access for everyone is enough for testing. '
+    )
+    parser.addoption(
+        '--s3-public-url-test-v6-file', default='s3://encode-test-autouri/tmp/v6.txt',
+        help='Write "v6: Hello World" to this file named "v6.txt" '
+             'and grant "Read object" permission on it. '
+             'Since S3 object does not inherit ACL from bucket/parent '
+             'and S3URI does not have methods to control ACL of an object '
+             'so this is the only way to test get_public_url(self) method in '
+             'S3URI.'
     )
     parser.addoption(
         '--gcs-root', default='gs://encode-test-autouri/tmp',
         help='GCS root path for CI test. '
+             'This GCS bucket must be publicly accessible '
+             '(read access for everyone is enough for testing).'
     )
     parser.addoption(
         '--gcs-root-url', default='gs://encode-test-autouri/tmp_url',
@@ -62,6 +75,11 @@ def s3_root(request):
     """S3 root to generate test S3 URIs on.
     """
     return request.config.getoption("--s3-root").rstrip('/')
+
+
+@pytest.fixture(scope="session")
+def s3_public_url_test_v6_file(request):
+    return request.config.getoption("--s3-public-url-test-v6-file")
 
 
 @pytest.fixture(scope="session")

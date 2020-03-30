@@ -25,6 +25,6 @@ setuptools.setup(
         'requests', 'pyopenssl',
         'google-cloud-storage',
         'boto3', 'awscli',
-        'filelock'
+        'dateparser', 'filelock'
     ]
 )

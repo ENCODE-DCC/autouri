@@ -10,7 +10,7 @@ from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 from .metadata import URIMetadata
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s|%(name)s|%(levelname)s| %(message)s')
 logger = logging.getLogger('autouri')
 logger_filelock().setLevel(logging.CRITICAL)
 
@@ -188,6 +188,7 @@ class URIBase(ABC):
     @property
     def md5_from_file(self) -> str:
         """Get md5 from a md5 file (.md5) if it exists.
+        Check md5 file is newer than the file that it is associated with
         """
         u_md5 = self.md5_file_uri
         if u_md5.is_valid:
@@ -195,13 +196,18 @@ class URIBase(ABC):
                 m_md5 = u_md5.get_metadata(skip_md5=True)
                 if m_md5.exists:
                     self_mtime = self.mtime
+                    logger.debug('md5 file exists. mt={mt}, md5_mt={md5_mt}, uri={u}'.format(
+                        mt=self_mtime,
+                        md5_mt=m_md5.mtime,
+                        u=self._uri))
                     if m_md5.mtime is not None and self_mtime is not None \
                             and m_md5.mtime >= self_mtime:
                         return u_md5.read()
             except Exception as e:
                 pass
 
-        logger.debug('Failed to get md5 hash from md5 file.')
+        logger.debug('Failed to get md5 hash from md5 file. uri={u}'.format(
+            u=self._uri))
         return None
 
     @property
@@ -210,14 +216,18 @@ class URIBase(ABC):
         """
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
-    def cp(self, dest_uri: Union[str, 'AutoURI'], no_lock=False, no_checksum=False, make_md5_file=False) -> 'AutoURI':
+    def cp(self, dest_uri: Union[str, 'AutoURI'],
+           no_lock=False, no_checksum=False, make_md5_file=False,
+           return_flag=False) -> 'AutoURI':
         """Makes a copy on destination. It is protected by a locking mechanism.
         Check md5 hash, file name/size and last modified date if possible to prevent
         unnecessary re-uploading.
 
         Args:
             dest_uri:
-                Target URI
+                Target URI.
+                If it's an explicit directory with slash (or os.sep) then
+                make it a file URI by suffixing self.basename.
             no_lock:
                 Do not use a locking mechanism
             no_checksum:
@@ -231,7 +241,9 @@ class URIBase(ABC):
                 hash then md5 file will not be created.
 
         Returns:
-            Tuple of (copy on destination, rc)
+            Tuple of (s, rc)
+                s:
+                    URI string of copy on destination
                 rc:
                     0:
                         made a copy
@@ -241,18 +253,37 @@ class URIBase(ABC):
                         md5 not found but matched file size and mtime is not newer
         """
         d = AutoURI(dest_uri)
+        sep = d.__class__.get_path_sep()
+        if d._uri.endswith(sep):
+            print(d._uri.rstrip(sep), sep, self.basename)
+            d = AutoURI(sep.join([d._uri.rstrip(sep), self.basename]))
 
         with d.get_lock(no_lock=no_lock) as lock:
             if not no_checksum:
                 # checksum (by md5, size, mdate)
                 m_dest = d.get_metadata(make_md5_file=make_md5_file)
+                logger.debug(
+                    'cp: dest metadata={m}, dest={dest}'.format(
+                        m=m_dest,
+                        dest=d.uri))
+
                 if m_dest.exists:
                     m_src = self.get_metadata()
+                    logger.debug(
+                        'cp: src metadata={m}, src={src}'.format(
+                            m=m_src,
+                            src=self._uri))
 
                     md5_matched = m_src.md5 is not None and m_dest.md5 is not None and \
                         m_src.md5 == m_dest.md5
                     if md5_matched:
-                        return d, 1
+                        logger.info(
+                            'cp: skipped due to md5_match, '
+                            'md5={md5}, src={src}, dest={dest}'.format(
+                                md5=m_src.md5,
+                                src=self._uri,
+                                dest=d.uri))
+                        return (d._uri, 1) if return_flag else d._uri 
 
                     name_matched = self.basename == d.basename
                     size_matched = m_src.size is not None and m_dest.size is not None and \
@@ -260,14 +291,26 @@ class URIBase(ABC):
                     src_is_not_newer = m_src.mtime is not None and m_dest.mtime is not None and \
                         m_src.mtime <= m_dest.mtime
                     if name_matched and size_matched and src_is_not_newer:                    
-                        return d, 2
+                        logger.info(
+                            'cp: skipped due to name_size_match, '
+                            'size={sz}, mt={mt}, src={src}, dest={dest}'.format(
+                                sz=m_src.size,
+                                mt=m_src.mtime,
+                                src=self._uri,
+                                dest=d.uri))
+                        return (d._uri, 2) if return_flag else d._uri
 
             if not self._cp(dest_uri=d):
                 if not d._cp_from(src_uri=self):
                     raise Exception(
                         'cp failed. src: {s} dest: {d}'.format(
                             s=str(self), d=str(d)))
-        return d, 0
+
+        logger.info(
+            'cp: copied, src={src}, dest={dest}'.format(
+                src=self._uri,
+                dest=d.uri))
+        return (d._uri, 0) if return_flag else d._uri
 
     def write(self, s, no_lock=False):
         """Write string/bytes to file. It is protected by a locking mechanism.
@@ -292,6 +335,14 @@ class URIBase(ABC):
             return contextmanager(lambda: (yield))()
         else:
             return self._get_lock(timeout=timeout, poll_interval=poll_interval)
+
+    def localize_on(self, loc_prefix, recursive=False, make_md5_file=False, depth=0) -> Tuple[str, bool]:
+        """Wrapper for classmethod localize().
+        Localizes self on target directory loc_prefix.
+        """
+        return AutoURI.localize(
+            src_uri=self, recursive=recursive, make_md5_file=make_md5_file,
+            loc_prefix=loc_prefix, return_flag=False, depth=depth)
 
     @abstractmethod
     def _get_lock(self, timeout=None, poll_interval=None) -> BaseFileLock:
@@ -390,7 +441,8 @@ class URIBase(ABC):
         return cls.LOC_PREFIX.rstrip(cls.get_path_sep())
 
     @classmethod
-    def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None, depth=0) -> Tuple[str, bool]:
+    def localize(cls, src_uri, recursive=False, make_md5_file=False, loc_prefix=None,
+                 return_flag=False, depth=0) -> Tuple[str, bool]:
         """Localize a source URI on this URI class (cls).
 
         Recursive localization is supported for the following file extensions:
@@ -413,29 +465,37 @@ class URIBase(ABC):
                 assuming that you have write permission on target's directory and
                 its subdirectories recursively.
             loc_prefix:
-                If defined, use it instead of cls.get_loc_prefix()                
+                If defined, use it instead of cls.get_loc_prefix()
+            return_flag:
+                Returns a tuple of (localized uri string, flag)
+                instead of localized uri string only
+                    See "Returns" section for details about flag
             depth:
                 To count recursion depth.
         Returns:
             loc_uri:
                 Localized URI STRING (not a AutoURI instance) since it should be used
                 for external function as a callback function.
-            localized:
-                Whether file is ACTUALLY localized on this cls's storage.
-                ACTUALLY means making a (possibly modified) copy of the original file
-                on this cls' storage (on loc_prefix).
-                This flag includes the following two cases:
-                    modified:
-                        file contents are modified during recursive localization
-                        so localized file is suffixed with 
-                        source's storage type. e.g. .s3, .gcs, and .local
-                    but not modified:
-                        file contents are not modified so localized file is not suffixed
-                        and hence will keep the original file basename
+            flag: (only if return_flag is on)
+                Whether file is modified or localized on a different storage.
+                "modified" means:
+                    file contents are modified during recursive localization
+                    so localized file is suffixed with 
+                    source's storage type. e.g. .s3, .gcs, and .local
+                    not modified:
+                "localized on a different storage" means:
+                    file contents are NOT modified so localized file is not suffixed
+                    and hence will keep the original file basename
+                    but localiziation actually happened
+                Otherwise, this flag will be False, which means that localization didn't
+                happen because file's contents didn't change
+                and it exists on the same storage so there is no need for localization.
+                In this case, loc_uri will be identical to self._uri.
         """
         src_uri = AutoURI(src_uri)
         if not src_uri.is_valid:
-            return src_uri._uri, False
+            return (src_uri._uri, False) if return_flag else src_uri._uri
+
         if depth >= AutoURI.LOC_RECURSION_DEPTH_LIMIT:
             raise AutoURIRecursionError(
                 'Maximum recursion depth {m} exceeded. '
@@ -462,7 +522,7 @@ class URIBase(ABC):
             # use cls.localize() itself as a callback fnc in recursion
             fnc_loc = lambda x: cls.localize(
                  x, recursive=recursive, make_md5_file=make_md5_file, loc_prefix=loc_prefix,
-                 depth=depth + 1)
+                 return_flag=True, depth=depth + 1)
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
                 if src_uri.ext == ext:
                     # read source contents for recursive localization
@@ -486,7 +546,7 @@ class URIBase(ABC):
         else:
             loc_uri = src_uri._uri
 
-        return loc_uri, modified or on_different_storage
+        return (loc_uri, modified or on_different_storage) if return_flag else loc_uri
 
     @staticmethod
     def init_uribase(
@@ -534,22 +594,26 @@ class AutoURI(URIBase):
                 return
 
     def _get_lock(self, timeout=None, poll_interval=None):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def read(self, byte=False):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _write(self, s):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _rm(self):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _cp(self, dest_uri):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
 
     def _cp_from(self, src_uri):
-        raise NotImplementedError('Not a valid URI?. {f}'.format(f=self._uri))
+        self.__raise_value_error()
+
+    def __raise_value_error(self):
+        raise ValueError('Not a valid URI?. {f}'.format(f=self._uri))
+

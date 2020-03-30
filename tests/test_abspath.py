@@ -121,7 +121,6 @@ def test_abspath_md5_file_uri(local_v6_txt):
     assert AbsPath(local_v6_txt + URIBase.MD5_FILE_EXT).uri == local_v6_txt + URIBase.MD5_FILE_EXT
 
 
-@pytest.mark.xfail(raises=ReadOnlyStorageError)
 def test_abspath_cp_url(
     local_v6_txt,
     url_test_path) -> 'AutoURI':
@@ -134,7 +133,8 @@ def test_abspath_cp_url(
 
     for test_path in (url_test_path, ):
         u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
-        _, ret = u.cp(u_dest)
+        with pytest.raises(ReadOnlyStorageError):
+            _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_abspath_cp(
@@ -167,26 +167,26 @@ def test_abspath_cp(
             u_dest.rm()
 
         assert not u_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         assert not u_dest.exists
         # cp without lock will be tested throughly in test_race_cond.py
-        _, ret = u.cp(u_dest, no_lock=True)
+        _, ret = u.cp(u_dest, no_lock=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         # trivial: copy without checksum when target doesn't exists
         assert not u_dest.exists
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
 
         # copy without checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
         time.sleep(1)
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be larger if it's overwritten as intended        
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
@@ -194,7 +194,7 @@ def test_abspath_cp(
         # copy with checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be the same as old time
         assert u_dest.mtime == m_dest.mtime and u.read() == u_dest.read() and ret == 1
@@ -207,7 +207,7 @@ def test_abspath_cp(
         u_dest_md5_file = AutoURI(u_dest.uri + URIBase.MD5_FILE_EXT)
         if u_dest_md5_file.exists:
             u_dest_md5_file.rm()
-        _, ret = u.cp(u_dest, make_md5_file=True)
+        _, ret = u.cp(u_dest, make_md5_file=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 1
         u_dest.rm()
 
@@ -229,19 +229,9 @@ def test_abspath_write(local_test_path):
 
 
 def test_abspath_write_no_permission():
-    try:
-        u = AbsPath('/x.tmp')
+    u = AbsPath('/test-permission-denied/x.tmp')
+    with pytest.raises(PermissionError):
         u.write('test')
-        assert False
-    except PermissionError:
-        pass
-
-    try:
-        u = AbsPath('/x.tmp')
-        u.write('test')
-        assert False
-    except PermissionError:
-        pass
 
 
 def test_abspath_rm(local_test_path):
@@ -306,6 +296,49 @@ def test_abspath_mkdirname(local_test_path):
     f = os.path.join(local_test_path, 'test_abspath_mkdirname', 'tmp.txt')
     AbsPath(f).mkdir_dirname()
     assert os.path.exists(os.path.dirname(f))
+
+
+def test_abspath_soft_link(local_test_path, local_v6_txt):
+    u_src = AbsPath(local_v6_txt)
+    f = os.path.join(local_test_path, 'test_abspath_soft_link', 'v6.txt')
+    u_target = AbsPath(f)
+    u_target.mkdir_dirname()
+    u_src.soft_link(u_target)
+    assert u_target.exists and u_target.read() == v6_txt_contents()
+    assert u_src.uri == os.path.realpath(u_target.uri)
+
+    with pytest.raises(OSError):
+        # file already exists
+        u_src.soft_link(u_target)
+    # no error if force
+    u_src.soft_link(u_target, force=True)
+    u_target.rm()
+
+
+# staticmethods
+def test_abspath_get_abspath_if_exists():
+    # write a local file on CWD.
+    test_local_file_abspath = os.path.join(os.getcwd(), 'test.txt')
+    u = AbsPath(test_local_file_abspath)
+    if u.exists:
+        u.rm()
+
+    # if it doesn't exist
+    assert AbsPath.get_abspath_if_exists('test.txt') == 'test.txt'
+    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == 'test.txt'
+
+    u.write('hello-world')
+
+    # if it exists
+    assert AbsPath.get_abspath_if_exists('test.txt') == test_local_file_abspath
+    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == test_local_file_abspath
+
+    assert AbsPath.get_abspath_if_exists('tttttttttest.txt') == 'tttttttttest.txt'
+    assert AbsPath.get_abspath_if_exists(AutoURI('tttttttttest.txt')) == 'tttttttttest.txt'
+    assert AbsPath.get_abspath_if_exists('~/if-it-does-not-exist') == '~/if-it-does-not-exist'
+    assert AbsPath.get_abspath_if_exists('non-existing-file') == 'non-existing-file'
+
+    u.rm()
 
 
 # classmethods
@@ -394,6 +427,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not os.path.exists(loc_prefix)
@@ -401,6 +435,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not os.path.exists(loc_prefix)
@@ -415,6 +450,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
@@ -424,6 +460,7 @@ def test_abspath_localize(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
