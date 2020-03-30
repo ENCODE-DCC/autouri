@@ -1,5 +1,10 @@
 [![CircleCI](https://circleci.com/gh/ENCODE-DCC/autouri.svg?style=svg)](https://circleci.com/gh/ENCODE-DCC/autouri)
 
+> **IMPORTANT**: If you use `--use-gsutil-for-s3` or `GCSURI.USE_GSUTIL_FOR_S3` then you need to update your `gsutil`. This flag allows a direct transfer between `gs://` and `s3://`. This requires `gsutil` >= 4.47. See this [issue](https://github.com/GoogleCloudPlatform/gsutil/issues/935) for details.
+```bash
+$ pip install gsutil --upgrade
+```
+
 # Autouri
 
 ## Introduction

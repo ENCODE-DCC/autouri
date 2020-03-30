@@ -70,6 +70,7 @@ def test_localize_mixed(
         loc_uri, localized = AbsPath.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         # check if all URIs defeind in localized JSON file exist
         recurse_raise_if_uri_not_exist(loc_uri)

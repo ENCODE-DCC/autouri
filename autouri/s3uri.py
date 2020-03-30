@@ -75,11 +75,14 @@ class S3URI(URIBase):
     Protected class constants:
         _CACHED_BOTO3_CLIENT_PER_THREAD:
         _CACHED_PRESIGNED_URLS:
+        _S3_PUBLIC_URL_FORMAT:
+            End point for a bucket with public access + key path
     """
     DURATION_PRESIGNED_URL: int = 4233600
 
     _CACHED_BOTO3_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
+    _S3_PUBLIC_URL_FORMAT = 'http://{bucket}.s3.amazonaws.com/{path}'
 
     _LOC_SUFFIX = '.s3'
     _SCHEMES = ('s3://',)
@@ -248,6 +251,10 @@ class S3URI(URIBase):
             ExpiresIn=duration)
         cache[self._uri] = url
         return url
+
+    def get_public_url(self) -> str:
+        bucket, path = self.get_bucket_path()
+        return S3URI._S3_PUBLIC_URL_FORMAT.format(bucket=bucket, path=path)
 
     @staticmethod
     def get_boto3_client(thread_id=-1) -> client:

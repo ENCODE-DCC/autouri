@@ -1,8 +1,10 @@
 import hashlib
+import errno
 import os
 import shutil
 from filelock import SoftFileLock
 from typing import Dict, Optional, Union
+from shutil import copyfile, SameFileError
 
 from .autouri import URIBase, AutoURI, logger
 from .metadata import URIMetadata, get_seconds_from_epoch
@@ -26,7 +28,8 @@ class AbsPath(URIBase):
     _PATH_SEP = os.sep
 
     def __init__(self, uri, thread_id=-1):
-        uri = os.path.expanduser(uri)
+        if isinstance(uri, str):
+            uri = os.path.expanduser(uri)
         super().__init__(uri, thread_id=thread_id)
 
     @property
@@ -99,15 +102,34 @@ class AbsPath(URIBase):
 
         if isinstance(dest_uri, AbsPath):            
             dest_uri.mkdir_dirname()
-            shutil.copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+            try:
+                copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+            except SameFileError as e:
+                logger.debug(
+                    'cp: ignored SameFileError. src={src}, dest={dest}'.format(
+                        src=self._uri,
+                        dest=dest_uri._uri))
+                if os.path.islink(dest_uri._uri):
+                    dest_uri._rm()
+                    copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
+
             return True
         return False
 
     def _cp_from(self, src_uri):
         return False
 
-    def get_mapped_url(self) -> Optional[str]:
-        for k, v in AbsPath.MAP_PATH_TO_URL.items():
+    def get_mapped_url(self, map_path_to_url=None) -> Optional[str]:
+        """
+        Args:
+            map_path_to_url:
+                dict with k, v where k is a path prefix and v is a URL prefix
+                k will be replaced with v.
+                If not given, defaults to use class constant AbsPath.MAP_PATH_TO_URL
+        """
+        if map_path_to_url is None:
+            map_path_to_url = AbsPath.MAP_PATH_TO_URL
+        for k, v in map_path_to_url.items():
             if k and self._uri.startswith(k):
                 return self._uri.replace(k, v, 1)
         return None
@@ -122,6 +144,30 @@ class AbsPath(URIBase):
                     d=self.dirname))
         return
 
+    def soft_link(self, target, force=False):
+        """Make a soft link of self on target absolute path.
+        If target already exists delete it and create a link.
+
+        Args:
+            target:
+                Target file's absolute path or URI object.
+            force:
+                Delete target file (or link) if it exists
+        """
+        target = AbsPath(target)
+        if not target.is_valid:
+            raise ValueError('Target path is not a valid abs path: {t}.'.format(
+                t=target.uri))
+        try:
+            target.mkdir_dirname()
+            os.symlink(self._uri, target._uri)
+        except OSError as e:
+            if e.errno == errno.EEXIST and force:
+                target.rm()
+                os.symlink(self._uri, target._uri)
+            else:
+                raise e
+
     def __calc_md5sum(self):
         """Expensive md5 calculation
         """
@@ -130,6 +176,15 @@ class AbsPath(URIBase):
             for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
+
+    @staticmethod
+    def get_abspath_if_exists(path):
+        if isinstance(path, URIBase):
+            path = path._uri
+        if isinstance(path, str):
+            if os.path.exists(os.path.expanduser(path)):
+                return os.path.abspath(os.path.expanduser(path))
+        return path
 
     @staticmethod
     def init_abspath(

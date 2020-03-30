@@ -120,7 +120,8 @@ def main():
 
     elif args.action == 'cp':
         u_src = AutoURI(src)
-        _, flag = u_src.cp(target, make_md5_file=args.make_md5_file)
+        _, flag = u_src.cp(
+            target, make_md5_file=args.make_md5_file, return_flag=True)
 
         if flag == 0:
             logger.info('Copying from file {s} to {t} done'.format(

@@ -141,7 +141,7 @@ def test_s3uri_cp_url(
         u_dest = AutoURI(os.path.join(test_path, 'test_s3uri_cp', basename))
 
         with pytest.raises(ReadOnlyStorageError):
-            _, ret = u.cp(u_dest)
+            _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_s3uri_cp(
@@ -173,26 +173,26 @@ def test_s3uri_cp(
             u_dest.rm()
 
         assert not u_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         assert not u_dest.exists
         # cp without lock will be tested throughly in test_race_cond.py
-        _, ret = u.cp(u_dest, no_lock=True)
+        _, ret = u.cp(u_dest, no_lock=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
         u_dest.rm()
 
         # trivial: copy without checksum when target doesn't exists
         assert not u_dest.exists
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 0
 
         # copy without checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
         time.sleep(1)
-        _, ret = u.cp(u_dest, no_checksum=True)
+        _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be larger if it's overwritten as intended        
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
@@ -200,7 +200,7 @@ def test_s3uri_cp(
         # copy with checksum when target exists
         m_dest = u_dest.get_metadata()
         assert m_dest.exists
-        _, ret = u.cp(u_dest)
+        _, ret = u.cp(u_dest, return_flag=True)
         # compare new mtime vs old mtime
         # new time should be the same as old time
         assert u_dest.mtime == m_dest.mtime and u.read() == u_dest.read() and ret == 1
@@ -213,7 +213,7 @@ def test_s3uri_cp(
         u_dest_md5_file = AutoURI(u_dest.uri + URIBase.MD5_FILE_EXT)
         if u_dest_md5_file.exists:
             u_dest_md5_file.rm()
-        _, ret = u.cp(u_dest, make_md5_file=True)
+        _, ret = u.cp(u_dest, make_md5_file=True, return_flag=True)
         assert u_dest.exists and u.read() == u_dest.read() and ret == 1
         u_dest.rm()
 
@@ -297,6 +297,13 @@ def test_s3uri_get_presigned_url(s3_v6_txt):
     with pytest.raises(HTTPError):
         # forbidden since it's already expired
         s = u_url.read()
+
+
+def test_s3uri_get_public_url(s3_public_url_test_v6_file):
+    url = S3URI(s3_public_url_test_v6_file).get_public_url()
+    u_url = HTTPURL(url)
+    assert u_url.is_valid
+    assert u_url.read() == v6_txt_contents()
 
 
 # classmethods
@@ -386,6 +393,7 @@ def test_s3uri_localize(
         loc_uri, localized = S3URI.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
@@ -393,6 +401,7 @@ def test_s3uri_localize(
         loc_uri, localized = S3URI.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
@@ -408,6 +417,7 @@ def test_s3uri_localize(
         loc_uri, localized = S3URI.localize(
             u_j1_json,
             recursive=False,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         expected = os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
@@ -418,6 +428,7 @@ def test_s3uri_localize(
         loc_uri, localized = S3URI.localize(
             u_j1_json,
             recursive=True,
+            return_flag=True,
             loc_prefix=loc_prefix_)
         expected = os.path.join(
             loc_prefix_, u_j1_json.loc_dirname,
