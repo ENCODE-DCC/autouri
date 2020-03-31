@@ -10,7 +10,7 @@ from .s3uri import S3URI
 from .gcsuri import GCSURI
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 def parse_args():
