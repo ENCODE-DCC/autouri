@@ -113,26 +113,22 @@ def parse_args():
     return args
 
 
-def get_local_file_if_valid(s):
-    path = os.path.expanduser(s)
-    abspath = os.path.abspath(path)
-    dirname = os.path.dirname(abspath)
-
-    if os.path.exists(path) or os.path.exists(dirname):
-        trailing_slash = os.sep if s.endswith(os.sep) else ''
-        return abspath + trailing_slash
+def get_local_path_if_valid(s):
+    abspath = os.path.abspath(os.path.expanduser(s))
+    if os.path.isdir(abspath):
+        return abspath + os.sep
     return s
 
 
 def main():
     args = parse_args()
 
-    src = get_local_file_if_valid(args.src)
+    src = get_local_path_if_valid(args.src)
 
     if args.action in ('cp', 'loc'):
         if args.use_gsutil_for_s3:
             GCSURI.init_gcsuri(use_gsutil_for_s3=True)
-        target = get_local_file_if_valid(args.target)
+        target = get_local_path_if_valid(args.target)
 
     if args.action == 'metadata':
         m = AutoURI(src).get_metadata()
