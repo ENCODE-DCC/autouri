@@ -255,7 +255,6 @@ class URIBase(ABC):
         d = AutoURI(dest_uri)
         sep = d.__class__.get_path_sep()
         if d._uri.endswith(sep):
-            print(d._uri.rstrip(sep), sep, self.basename)
             d = AutoURI(sep.join([d._uri.rstrip(sep), self.basename]))
 
         with d.get_lock(no_lock=no_lock) as lock:
