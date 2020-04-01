@@ -10,11 +10,22 @@ from .s3uri import S3URI
 from .gcsuri import GCSURI
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2.1'
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '-v', '--version', action='store_true',
+        help='Show version')
+
+    parent_all = argparse.ArgumentParser(add_help=False)
+    group_log_level = parent_all.add_mutually_exclusive_group()
+    group_log_level.add_argument('-V', '--verbose', action='store_true',
+                   help='Prints all logs >= INFO level')
+    group_log_level.add_argument('-D', '--debug', action='store_true',
+                   help='Prints all logs >= DEBUG level')
 
     parent_src = argparse.ArgumentParser(add_help=False)
     parent_src.add_argument('src',
@@ -42,7 +53,7 @@ def parse_args():
     p_metadata = subparser.add_parser(
         'metadata',
         help='AutoURI(src).get_metadata(): Get metadata of source.',
-        parents=[parent_src])
+        parents=[parent_src, parent_all])
 
     p_cp = subparser.add_parser(
         'cp',
@@ -50,37 +61,37 @@ def parse_args():
              'target must be a full filename/directory. '
              'Target directory must have a trailing directory separator '
              '(e.g. /)',
-        parents=[parent_src, parent_target, parent_cp])
+        parents=[parent_src, parent_target, parent_cp, parent_all])
 
     p_read = subparser.add_parser(
         'read',
         help='AutoURI(src).read(): Read from source.',
-        parents=[parent_src])
+        parents=[parent_src, parent_all])
 
     p_write = subparser.add_parser(
         'write',
         help='AutoURI(src).write(text): Write text on source.',
-        parents=[parent_src])
+        parents=[parent_src, parent_all])
     p_write.add_argument('text',
         help='Text to be written to source file.')
 
     p_rm = subparser.add_parser(
         'rm',
         help='AutoURI(src).rm(): Delete source.',
-        parents=[parent_src])
+        parents=[parent_src, parent_all])
 
     p_loc = subparser.add_parser(
         'loc',
         help='AutoURI(src).localize_on(target): Localize source on target directory '
              'Target directory must end with directory separator',
-        parents=[parent_src, parent_target, parent_cp])
+        parents=[parent_src, parent_target, parent_cp, parent_all])
     p_loc.add_argument('--recursive', action='store_true',
         help='Recursively localize source into target directory.')
 
     p_presign = subparser.add_parser(
         'presign',
         help='AutoURI(src).get_presigned_url(). For cloud-based URIs only.',
-        parents=[parent_src])
+        parents=[parent_src, parent_all])
     p_presign.add_argument('--gcp-private-key-file',
         help='GCP private key file (JSON format) to presign gs:// URIs.')
     p_presign.add_argument('--duration', type=int,
@@ -90,7 +101,16 @@ def parse_args():
         parser.print_help()
         parser.exit()
 
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.version:
+        print(__version__)
+        parser.exit()
+    if args.verbose:
+        logger.setLevel('INFO')
+    elif args.debug:
+        logger.setLevel('DEBUG')
+
+    return args
 
 
 def get_local_file_if_valid(s):
