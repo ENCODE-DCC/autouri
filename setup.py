@@ -1,5 +1,4 @@
 import setuptools
-import pkg_resources
 
 
 with open('README.md', 'r') as fh:
@@ -7,7 +6,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='autouri',
-    version=pkg_resources.get_distribution('autouri').version,
+    version='0.1.2.1',
     python_requires='>=3.6',
     scripts=['bin/autouri'],
     author='Jin wook Lee',
