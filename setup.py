@@ -1,12 +1,13 @@
 import setuptools
-import autouri
+import pkg_resources
+
 
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='autouri',
-    version=autouri.__version__,
+    version=pkg_resources.get_distribution('autouri').version,
     python_requires='>=3.6',
     scripts=['bin/autouri'],
     author='Jin wook Lee',
