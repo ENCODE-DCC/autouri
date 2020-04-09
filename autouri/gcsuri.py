@@ -1,8 +1,9 @@
-"""GCS Bucket policies:
+"""GCS Bucket configuration:
     Object versioning must be turned off
         Check it with "gsutil versioning get gs://BUCKET-NAME"
         https://cloud.google.com/storage/docs/object-versioning
 """
+import logging
 import os
 import requests
 import time
@@ -16,9 +17,11 @@ from subprocess import check_call, PIPE, CalledProcessError
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Tuple, Optional
 from urllib3.exceptions import HTTPError
-
 from .autouri import URIBase, AutoURI, logger
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+
+
+logger = logging.getLogger(__name__)
 
 
 class GCSURILock(BaseFileLock):

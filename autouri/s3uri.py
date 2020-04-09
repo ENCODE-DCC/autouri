@@ -1,6 +1,7 @@
-"""S3 Bucket policies:
+"""S3 Bucket configuration:
     S3 Object versioning must be turned off
 """
+import logging
 import requests
 import time
 from boto3 import client
@@ -8,9 +9,11 @@ from botocore.exceptions import ClientError
 from filelock import BaseFileLock
 from tempfile import NamedTemporaryFile
 from typing import Tuple, Optional
-
-from .autouri import URIBase, AutoURI, logger
+from .autouri import URIBase, AutoURI
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+
+
+logger = logging.getLogger(__name__)
 
 
 class S3URILock(BaseFileLock):
