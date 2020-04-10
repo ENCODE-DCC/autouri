@@ -23,8 +23,6 @@ def parse_args():
 
     parent_all = argparse.ArgumentParser(add_help=False)
     group_log_level = parent_all.add_mutually_exclusive_group()
-    group_log_level.add_argument('-V', '--verbose', action='store_true',
-                   help='Prints all logs >= INFO level')
     group_log_level.add_argument('-D', '--debug', action='store_true',
                    help='Prints all logs >= DEBUG level')
 
@@ -107,12 +105,10 @@ def parse_args():
         print(version)
         parser.exit()
 
-    if args.verbose:
-        log_level = 'INFO'
-    elif args.debug:    
+    if args.debug:
         log_level = 'DEBUG'
     else:
-        log_level = 'WARNING'
+        log_level = 'INFO'
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s|%(name)s|%(levelname)s| %(message)s')
