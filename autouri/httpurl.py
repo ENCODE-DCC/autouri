@@ -1,9 +1,12 @@
 import hashlib
+import logging
 import requests
 from typing import Optional
-
 from .autouri import URIBase, AutoURI, logger
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+
+
+logger = logging.getLogger(__name__)
 
 
 class ReadOnlyStorageError(Exception):
