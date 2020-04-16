@@ -8,7 +8,7 @@ from .abspath import AbsPath
 from .httpurl import HTTPURL
 from .s3uri import S3URI
 from .gcsuri import GCSURI
-from .version import version
+from . import __version__ as version
 
 
 logger = logging.getLogger(__name__)
