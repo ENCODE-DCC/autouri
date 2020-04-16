@@ -1,13 +1,16 @@
-import hashlib
 import errno
+import hashlib
+import logging
 import os
 import shutil
 from filelock import SoftFileLock
-from typing import Dict, Optional, Union
 from shutil import copyfile, SameFileError
-
-from .autouri import URIBase, AutoURI, logger
+from typing import Dict, Optional, Union
+from .autouri import URIBase, AutoURI
 from .metadata import URIMetadata, get_seconds_from_epoch
+
+
+logger = logging.getLogger(__name__)
 
 
 class AbsPath(URIBase):
