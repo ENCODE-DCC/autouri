@@ -106,7 +106,7 @@ class HTTPURL(URIBase):
             self._uri, stream=True, allow_redirects=True,
             headers=requests.utils.default_headers())
         r.raise_for_status()
-        b = r.raw.read()
+        b = r.content
         if byte:
             return b
         else:
