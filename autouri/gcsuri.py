@@ -47,7 +47,7 @@ class GCSURILock(BaseFileLock):
                 blob.temporary_hold = True
                 blob.patch()
                 self._lock_file_fd = id(self)
-            except (Forbidden, GatewayTimeout, NotFound, ServiceUnavailable):
+            except (GatewayTimeout, NotFound, ServiceUnavailable):
                 pass
         return None
 
