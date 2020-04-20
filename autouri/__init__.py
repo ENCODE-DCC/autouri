@@ -5,4 +5,4 @@ from .gcsuri import GCSURI
 from .s3uri import S3URI
 
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
