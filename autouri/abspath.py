@@ -1,4 +1,5 @@
 import errno
+import glob
 import hashlib
 import logging
 import os
@@ -38,6 +39,21 @@ class AbsPath(URIBase):
     @property
     def is_valid(self):
         return os.path.isabs(self._uri)
+
+    def rmdir(self, dry_run=False, num_threads=None, no_lock=False):
+        """Do `rm -rf` instead of deleting individual files.
+        For dry-run mode, call base class' method to show files to be deleted.
+        """
+        if not os.path.exists(self._uri):
+            raise FileNotFoundError(
+                'Directory does not exist. deleted already? {dir}'.format(
+                    dir=self._uri
+                )
+            )
+        if dry_run:
+            super().rmdir(dry_run=True, no_lock=no_lock)
+        else:
+            shutil.rmtree(self._uri)
 
     def _get_lock(self, timeout=None, poll_interval=None):
         """Use filelock.SoftFileLock for AbsPath.
@@ -84,6 +100,14 @@ class AbsPath(URIBase):
             param = 'r'
         with open(self._uri, param) as fp:
             return fp.read()
+
+    def find_all_files(self):
+        query = os.path.join(self._uri, '**')
+        result = []
+        for f in glob.glob(query, recursive=True):
+            if os.path.isfile(f):
+                result.append(os.path.abspath(f))
+        return result
 
     def _write(self, s):
         self.mkdir_dirname()

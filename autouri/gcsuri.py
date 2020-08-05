@@ -166,6 +166,22 @@ class GCSURI(URIBase):
             return b
         return b.decode()
 
+    def find_all_files(self):
+        cl = GCSURI.get_gcs_client(self._thread_id)
+        bucket, path = self.get_bucket_path()
+        sep = GCSURI.get_path_sep()
+        if path != '':
+            path = path.rstrip(sep) + sep
+
+        result = []
+        blobs = cl.list_blobs(bucket, prefix=path)
+        if blobs:
+            for blob in blobs:
+                scheme = GCSURI.get_schemes()[0]
+                uri = scheme + sep.join([bucket, blob.name])
+                result.append(uri)
+        return result
+
     def _write(self, s):
         blob, _ = self.get_blob(new=True)
         blob.upload_from_string(s)
@@ -301,8 +317,13 @@ class GCSURI(URIBase):
     def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
-        bucket, path = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
-        return bucket, path        
+        arr = self.uri_wo_scheme.split(GCSURI.get_path_sep(), 1)
+        if len(arr) == 1:
+            # root directory without path (key)
+            bucket, path = arr[0], ''
+        else:
+            bucket, path = arr
+        return bucket, path
 
     def get_presigned_url(self, duration=None, private_key_file=None, use_cached=False) -> str:
         """

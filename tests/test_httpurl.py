@@ -13,7 +13,8 @@ from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 from .files import (
     v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist
+    recurse_raise_if_uri_not_exist,
+    make_files_in_dir,
 )
 
 
@@ -273,6 +274,20 @@ def test_httpurl_read(url_v6_txt):
     u = HTTPURL(url_v6_txt)
     assert u.read() == v6_txt_contents()
     assert u.read(byte=True) == v6_txt_contents().encode()
+
+
+def test_httpurl_find_all_files_and_rmdir(url_test_path):
+    """Test two methods which are not supported (implemented).:
+        - find_all_files()
+        - rmdir()
+    """
+    prefix = os.path.join(url_test_path, 'test_httpurl_find_all_files_and_rmdir')
+
+    with pytest.raises(NotImplementedError):
+        HTTPURL(prefix).find_all_files()
+
+    with pytest.raises(NotImplementedError):
+        AutoURI(prefix).rmdir()
 
 
 # original methods in HTTPURL

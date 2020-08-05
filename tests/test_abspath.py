@@ -12,7 +12,8 @@ from autouri.httpurl import ReadOnlyStorageError
 from .files import (
     v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist
+    recurse_raise_if_uri_not_exist,
+    make_files_in_dir,
 )
 
 
@@ -278,6 +279,40 @@ def test_abspath_read(local_v6_txt):
     assert u.read(byte=True) == v6_txt_contents().encode()
 
 
+def test_abspath_find_all_files_and_rmdir(local_test_path):
+    """Test two methods:
+        - find_all_files()
+        - rmdir()
+
+    Make a directory structure with empty files
+    (and an empty directory for local storage only).
+
+    Check if find_all_files() returns correct file (not sub-directory) paths.
+    Check if rmdir() deletes all empty files on given $prefix.
+
+    For local storage, check if find_all_files() does not return
+    an empty dir.
+    """
+    prefix = os.path.join(local_test_path, 'test_abspath_find_all_files_and_rmdir')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
+
+    # test find_all_files()
+    all_files_found = AbsPath(prefix).find_all_files()
+    assert sorted(all_files_found) == sorted(all_files)
+    for file in all_files:
+        assert AbsPath(file).exists
+
+    # test rmdir(dry_run=True)
+    AutoURI(prefix).rmdir(dry_run=True)
+    for file in all_files:
+        assert AbsPath(file).exists
+
+    # test rmdir(dry_run=False)
+    AutoURI(prefix).rmdir(dry_run=False)
+    for file in all_files:
+        assert not AbsPath(file).exists
+
+
 # original methods in AbsPath
 def test_abspath_get_mapped_url(local_v6_txt):
     u = AbsPath(local_v6_txt)
@@ -360,7 +395,6 @@ def test_abspath_get_loc_prefix() -> str:
     assert AbsPath.get_loc_prefix() == test_loc_prefix
     AbsPath.init_abspath(loc_prefix='')
     assert AbsPath.get_loc_prefix() == ''
-
 
 
 def test_abspath_localize(
