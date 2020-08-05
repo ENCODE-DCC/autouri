@@ -184,7 +184,6 @@ def main():
             else:
                 raise NotImplementedError
             logger.info('Copying from file {s} to {t} {reason}'.format(
-
                 s=src, t=target, reason=reason))
     elif args.action == 'read':
         s = AutoURI(src).read()
