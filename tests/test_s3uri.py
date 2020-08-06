@@ -287,7 +287,6 @@ def test_s3uri_find_all_files(s3_test_path):
     prefix = os.path.join(s3_test_path, 'test_s3uri_find_all_files')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
-    # test find_all_files()
     all_files_found = S3URI(prefix).find_all_files()
     assert sorted(all_files_found) == sorted(all_files)
     for file in all_files:

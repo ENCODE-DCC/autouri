@@ -285,7 +285,6 @@ def test_gcsuri_find_all_files(gcs_test_path):
     prefix = os.path.join(gcs_test_path, 'test_gcsuri_find_all_files')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
-    # test find_all_files()
     all_files_found = GCSURI(prefix).find_all_files()
     assert sorted(all_files_found) == sorted(all_files)
     for file in all_files:

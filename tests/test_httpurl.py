@@ -277,10 +277,6 @@ def test_httpurl_read(url_v6_txt):
 
 
 def test_httpurl_find_all_files(url_test_path):
-    """Test two methods which are not supported (implemented).:
-        - find_all_files()
-        - rmdir()
-    """
     prefix = os.path.join(url_test_path, 'test_httpurl_find_all_files')
 
     with pytest.raises(NotImplementedError):
@@ -288,10 +284,6 @@ def test_httpurl_find_all_files(url_test_path):
 
 
 def test_httpurl_rmdir(url_test_path):
-    """Test two methods which are not supported (implemented).:
-        - find_all_files()
-        - rmdir()
-    """
     prefix = os.path.join(url_test_path, 'test_httpurl_rmdir')
 
     with pytest.raises(NotImplementedError):

@@ -287,10 +287,9 @@ def test_abspath_find_all_files(local_test_path):
     """
     prefix = os.path.join(local_test_path, 'test_abspath_find_all_files')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
-    empty_sub_dir = '${prefix}/d/a'.format(prefix=prefix)
+    empty_sub_dir = os.path.join(prefix, 'd', 'a')
     assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
-    # test find_all_files()
     all_files_found = AbsPath(prefix).find_all_files()
     assert sorted(all_files_found) == sorted(all_files)
     for file in all_files:
@@ -306,7 +305,7 @@ def test_abspath_rmdir(local_test_path):
     """
     prefix = os.path.join(local_test_path, 'test_abspath_rmdir')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
-    empty_sub_dir = '${prefix}/d/a'.format(prefix=prefix)
+    empty_sub_dir = os.path.join(prefix, 'd', 'a')
     assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
     # test rmdir(dry_run=True)
