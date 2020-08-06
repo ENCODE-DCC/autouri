@@ -152,7 +152,7 @@ class S3URI(URIBase):
         cl = S3URI.get_boto3_client(self._thread_id)
         bucket, path = self.get_bucket_path()
         sep = S3URI.get_path_sep()
-        if path != '':
+        if path:
             path = path.rstrip(sep) + sep
 
         result = []
@@ -248,7 +248,7 @@ class S3URI(URIBase):
     def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
-        arr = self.uri_wo_scheme.split(S3URI.get_path_sep(), 1)
+        arr = self.uri_wo_scheme.split(S3URI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
             bucket, path = arr[0], ''
