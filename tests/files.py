@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Files for testing
 
 Use v6_txt to test basic/simple methods of AutoURI.
