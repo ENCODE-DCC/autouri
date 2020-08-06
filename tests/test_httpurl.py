@@ -122,6 +122,7 @@ def test_httpurl_md5_from_file(gcs_v6_txt_url, url_v6_txt, v6_txt_md5_hash):
     u = HTTPURL(url_v6_txt)
     assert u.md5_from_file is None
 
+    u.get_metadata(make_md5_file=True)
     # HTTPURL should not make md5 file even with make_md5_file=True
     assert not u_md5.exists
     assert u.md5_from_file is None

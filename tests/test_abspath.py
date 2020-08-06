@@ -106,6 +106,7 @@ def test_abspath_md5_from_file(local_v6_txt, v6_txt_md5_hash):
     u = AbsPath(local_v6_txt)
     assert u.md5_from_file is None
 
+    u.get_metadata(make_md5_file=True)
     assert u_md5.exists
     assert u.md5_from_file == v6_txt_md5_hash
     u_md5.rm()
