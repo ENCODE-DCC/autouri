@@ -40,7 +40,7 @@ class AbsPath(URIBase):
     def is_valid(self):
         return os.path.isabs(self._uri)
 
-    def rmdir(self, dry_run=False, num_threads=None, no_lock=False):
+    def rmdir(self, dry_run=False, no_lock=False):
         """Do `rm -rf` instead of deleting individual files.
         For dry-run mode, call base class' method to show files to be deleted.
         """
