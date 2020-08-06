@@ -205,7 +205,7 @@ def main():
         logger.info('Deleted {s}'.format(s=src))
 
     elif args.action == 'rmdir':
-        AutoURI(src).rmdir(dry_run=not args.delete, num_threads=args.nth)
+        AutoURI(src).rmdir(dry_run=not args.delete, num_threads=args.num_threads)
         if not args.delete:
             logger.warning(
                 'rmdir ran in a dry-run mode. '
