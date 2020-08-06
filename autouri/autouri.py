@@ -12,12 +12,11 @@ from .metadata import URIMetadata
 logger = logging.getLogger(__name__)
 
 
-def autouri_rm(uri_and_thread_id):
+def autouri_rm(uri, thread_id):
     """Wrapper for AutoURI(uri).rm().
     This function is used for multiprocessing.map() which requires a picklable function
     outside the scope of the class.
     """
-    uri, thread_id = uri_and_thread_id
     AutoURI(uri, thread_id=thread_id).rm()
 
 
@@ -357,7 +356,7 @@ class URIBase(ABC):
 
         args = list(zip(files, thread_ids))
         with multiprocessing.Pool(num_threads) as p:
-            p.map(autouri_rm, args)
+            p.starmap(autouri_rm, args)
 
     def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> BaseFileLock:
         """
