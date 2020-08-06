@@ -97,8 +97,8 @@ def parse_args():
         action='store_true',
         help='DELETE outputs.')
     p_rmdir.add_argument(
-        '--nth',
-        default=DEFAULT_RMDIR_NTH,
+        '-t', '--num-threads',
+        default=URIBase.DEFAULT_NUM_THREADS,
         type=int,
         help='Number of threads used for deleting '
         'multiple files on cloud buckets (gs://, s3://).')
