@@ -5,21 +5,27 @@
 """
 import logging
 import os
-import requests
 import time
 from datetime import timedelta
+from subprocess import check_call
+from tempfile import NamedTemporaryFile, TemporaryDirectory
+from typing import Optional, Tuple
+
+import requests
 from filelock import BaseFileLock
-from google.api_core.exceptions import NotFound, Forbidden, GatewayTimeout, ServiceUnavailable
+from google.api_core.exceptions import (
+    Forbidden,
+    GatewayTimeout,
+    NotFound,
+    PermissionDenied,
+    ServiceUnavailable,
+)
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
-from subprocess import check_call, PIPE, CalledProcessError
-from tempfile import NamedTemporaryFile, TemporaryDirectory
-from typing import Tuple, Optional
-from urllib3.exceptions import HTTPError
-from .autouri import URIBase, AutoURI, logger
-from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
+from .autouri import AutoURI, URIBase
+from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +33,10 @@ logger = logging.getLogger(__name__)
 class GCSURILock(BaseFileLock):
     """Slow but stable locking with using GCS temporary_hold
     """
+
     def __init__(
-        self, lock_file, thread_id=-1, timeout=900, poll_interval=10.0, no_lock=False):
+        self, lock_file, thread_id=-1, timeout=900, poll_interval=10.0, no_lock=False
+    ):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
         self._thread_id = thread_id
@@ -43,7 +51,7 @@ class GCSURILock(BaseFileLock):
         blob, bucket_obj = u.get_blob(new=True)
         if blob is not None:
             try:
-                blob.upload_from_string('')
+                blob.upload_from_string("")
                 blob.temporary_hold = True
                 blob.patch()
                 self._lock_file_fd = id(self)
@@ -88,14 +96,15 @@ class GCSURI(URIBase):
 
     Protected class constants:
         _CACHED_GCS_CLIENT_PER_THREAD:
-            Per-thread GCS client object is required since 
+            Per-thread GCS client object is required since
             GCS client is not thread-safe.
         _CACHED_PRESIGNED_URLS:
             Can use cached presigned URLs.
         _GCS_PUBLIC_URL_FORMAT:
             End point for a bucket with public access + key path
     """
-    PRIVATE_KEY_FILE: str = ''
+
+    PRIVATE_KEY_FILE: str = ""
     DURATION_PRESIGNED_URL: int = 4233600
 
     RETRY_BUCKET: int = 3
@@ -104,10 +113,10 @@ class GCSURI(URIBase):
 
     _CACHED_GCS_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
-    _GCS_PUBLIC_URL_FORMAT = 'http://storage.googleapis.com/{bucket}/{path}'
+    _GCS_PUBLIC_URL_FORMAT = "http://storage.googleapis.com/{bucket}/{path}"
 
-    _LOC_SUFFIX = '.gcs'
-    _SCHEMES = ('gs://',)
+    _LOC_SUFFIX = ".gcs"
+    _SCHEMES = ("gs://",)
 
     def __init__(self, uri, thread_id=-1):
         super().__init__(uri, thread_id=thread_id)
@@ -121,7 +130,8 @@ class GCSURI(URIBase):
             self._uri + GCSURI.LOCK_FILE_EXT,
             thread_id=self._thread_id,
             timeout=timeout,
-            poll_interval=poll_interval)
+            poll_interval=poll_interval,
+        )
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = False, None, None, None
@@ -134,30 +144,26 @@ class GCSURI(URIBase):
                 ex = True
 
                 if not skip_md5:
-                    if 'md5hash' in h:
-                        md5 = parse_md5_str(h['md5hash'])
-                    elif 'etag' in h:
-                        md5 = parse_md5_str(h['etag'])
+                    if "md5hash" in h:
+                        md5 = parse_md5_str(h["md5hash"])
+                    elif "etag" in h:
+                        md5 = parse_md5_str(h["etag"])
                     if md5 is None:
                         # make_md5_file is ignored for GCSURI
                         md5 = self.md5_from_file
 
-                if 'size' in h:
-                    sz = int(h['size'])
+                if "size" in h:
+                    sz = int(h["size"])
 
-                if 'updated' in h:
-                    mt = get_seconds_from_epoch(h['updated'])
-                elif 'timecreated' in h:
-                    mt = get_seconds_from_epoch(h['timecreated'])
+                if "updated" in h:
+                    mt = get_seconds_from_epoch(h["updated"])
+                elif "timecreated" in h:
+                    mt = get_seconds_from_epoch(h["timecreated"])
 
-        except Exception as e:
+        except Exception:
             pass
 
-        return URIMetadata(
-            exists=ex,
-            mtime=mt,
-            size=sz,
-            md5=md5)
+        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         blob, _ = self.get_blob()
@@ -194,7 +200,7 @@ class GCSURI(URIBase):
         return
 
     def _cp(self, dest_uri):
-        """Copy from GCSURI to 
+        """Copy from GCSURI to
             GCSURI
             S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
             AbsPath
@@ -204,11 +210,11 @@ class GCSURI(URIBase):
 
         dest_uri = AutoURI(dest_uri)
 
-        if isinstance(dest_uri, (GCSURI, AbsPath)):            
+        if isinstance(dest_uri, (GCSURI, AbsPath)):
             src_blob, src_bucket = self.get_blob()
 
             if src_blob is None:
-                raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
+                raise ValueError("Blob does not exist for {f}".format(f=self._uri))
 
             if isinstance(dest_uri, GCSURI):
                 _, dest_path = dest_uri.get_bucket_path()
@@ -219,13 +225,13 @@ class GCSURI(URIBase):
             elif isinstance(dest_uri, AbsPath):
                 dest_uri.mkdir_dirname()
                 # mtime is not updated without update().
-                src_blob.update()                
+                src_blob.update()
                 src_blob.download_to_filename(dest_uri._uri)
                 return True
 
         elif isinstance(dest_uri, S3URI):
             if GCSURI.USE_GSUTIL_FOR_S3:
-                rc = check_call(['gsutil', '-q', 'cp', self._uri, dest_uri._uri])
+                rc = check_call(["gsutil", "-q", "cp", self._uri, dest_uri._uri])
                 return rc == 0
             else:
                 # use local temporary file instead
@@ -257,7 +263,7 @@ class GCSURI(URIBase):
 
         elif isinstance(src_uri, S3URI):
             if GCSURI.USE_GSUTIL_FOR_S3:
-                rc = check_call(['gsutil', '-q', 'cp', src_uri._uri, self._uri])
+                rc = check_call(["gsutil", "-q", "cp", src_uri._uri, self._uri])
                 return rc == 0
             else:
                 # use local temporary file instead
@@ -269,8 +275,11 @@ class GCSURI(URIBase):
 
         elif isinstance(src_uri, HTTPURL):
             r = requests.get(
-                src_uri._uri, stream=True, allow_redirects=True,
-                headers=requests.utils.default_headers())
+                src_uri._uri,
+                stream=True,
+                allow_redirects=True,
+                headers=requests.utils.default_headers(),
+            )
             r.raise_for_status()
             with NamedTemporaryFile() as fp:
                 for chunk in r.iter_content(HTTPURL.get_http_chunk_size()):
@@ -310,7 +319,7 @@ class GCSURI(URIBase):
                 raise
             except PermissionDenied:
                 raise
-            except:
+            except Exception:
                 time.sleep(GCSURI.RETRY_BUCKET_DELAY)
         return blob, bucket_obj
 
@@ -320,16 +329,18 @@ class GCSURI(URIBase):
         arr = self.uri_wo_scheme.split(GCSURI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
-            bucket, path = arr[0], ''
+            bucket, path = arr[0], ""
         else:
             bucket, path = arr
         return bucket, path
 
-    def get_presigned_url(self, duration=None, private_key_file=None, use_cached=False) -> str:
+    def get_presigned_url(
+        self, duration=None, private_key_file=None, use_cached=False
+    ) -> str:
         """
         Args:
             duration: Duration in seconds. This is ignored if use_cached is on.
-            use_cached: Use a cached URL. 
+            use_cached: Use a cached URL.
         """
         cache = GCSURI._CACHED_PRESIGNED_URLS
         if use_cached:
@@ -337,21 +348,22 @@ class GCSURI(URIBase):
                 return cache[self._uri]
         # if not self.exists:
         #     raise Exception('File does not exist. f={f}'.format(self._uri))
-        if private_key_file is None:            
+        if private_key_file is None:
             private_key_file = os.path.expanduser(GCSURI.PRIVATE_KEY_FILE)
         else:
             private_key_file = os.path.expanduser(private_key_file)
         if not os.path.exists(private_key_file):
-            raise Exception('GCS private key file not found. f:{f}'.format(
-                f=private_key_file))
+            raise Exception(
+                "GCS private key file not found. f:{f}".format(f=private_key_file)
+            )
         credentials = Credentials.from_service_account_file(private_key_file)
-        duration = duration if duration is not None else GCSURI.DURATION_PRESIGNED_URL        
+        duration = duration if duration is not None else GCSURI.DURATION_PRESIGNED_URL
         blob, _ = self.get_blob()
         if blob is None:
-            raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
+            raise ValueError("Blob does not exist for {f}".format(f=self._uri))
         url = blob.generate_signed_url(
-            expiration=timedelta(seconds=duration),
-            credentials=credentials)
+            expiration=timedelta(seconds=duration), credentials=credentials
+        )
         cache[self._uri] = url
         return url
 
@@ -370,12 +382,13 @@ class GCSURI(URIBase):
 
     @staticmethod
     def init_gcsuri(
-        loc_prefix: Optional[str]=None,
-        private_key_file: Optional[str]=None,
-        duration_presigned_url: Optional[int]=None,
-        retry_bucket: Optional[int]=None,
-        retry_bucket_delay: Optional[int]=None,
-        use_gsutil_for_s3: Optional[bool]=None):
+        loc_prefix: Optional[str] = None,
+        private_key_file: Optional[str] = None,
+        duration_presigned_url: Optional[int] = None,
+        retry_bucket: Optional[int] = None,
+        retry_bucket_delay: Optional[int] = None,
+        use_gsutil_for_s3: Optional[bool] = None,
+    ):
         if loc_prefix is not None:
             GCSURI.LOC_PREFIX = loc_prefix
         if private_key_file is not None:
