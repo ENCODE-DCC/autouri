@@ -34,6 +34,7 @@ install_shellcheck: &install_shellcheck
 install_precommit: &install_precommit
   name: Install Python pre-commit
   command: |
+    sudo pip3 install PyYAML --ignore-installed
     sudo pip3 install pre-commit
 
 
