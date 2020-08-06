@@ -318,7 +318,7 @@ def test_abspath_rmdir(local_test_path):
     AbsPath(prefix).rmdir(dry_run=False)
     for file in all_files:
         assert not AbsPath(file).exists
-    assert not os.path.exists(empty_sub_dir)    
+    assert not os.path.exists(empty_sub_dir)
     assert not os.path.exists(prefix)
 
 
