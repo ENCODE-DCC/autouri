@@ -279,38 +279,47 @@ def test_abspath_read(local_v6_txt):
     assert u.read(byte=True) == v6_txt_contents().encode()
 
 
-def test_abspath_find_all_files_and_rmdir(local_test_path):
-    """Test two methods:
-        - find_all_files()
-        - rmdir()
-
-    Make a directory structure with empty files
-    (and an empty directory for local storage only).
+def test_abspath_find_all_files(local_test_path):
+    """Make a directory structure with empty files and an empty directory.
 
     Check if find_all_files() returns correct file (not sub-directory) paths.
-    Check if rmdir() deletes all empty files on given $prefix.
-
-    For local storage, check if find_all_files() does not return
-    an empty dir.
+    Also check if find_all_files() does not return an empty sub-directory.
     """
-    prefix = os.path.join(local_test_path, 'test_abspath_find_all_files_and_rmdir')
+    prefix = os.path.join(local_test_path, 'test_abspath_find_all_files')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
+    empty_sub_dir = '${prefix}/d/a'.format(prefix=prefix)
+    assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
     # test find_all_files()
     all_files_found = AbsPath(prefix).find_all_files()
     assert sorted(all_files_found) == sorted(all_files)
     for file in all_files:
         assert AbsPath(file).exists
+        assert file.rstrip('/') != empty_sub_dir.rstrip('/')
+
+
+def test_abspath_rmdir(local_test_path):
+    """Make a directory structure with empty files and an empty directory.
+
+    Check if rmdir() deletes the root directory itself including
+    all empty files and empty directory on given $prefix.
+    """
+    prefix = os.path.join(local_test_path, 'test_abspath_rmdir')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
+    empty_sub_dir = '${prefix}/d/a'.format(prefix=prefix)
+    assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
     # test rmdir(dry_run=True)
-    AutoURI(prefix).rmdir(dry_run=True)
+    AbsPath(prefix).rmdir(dry_run=True)
     for file in all_files:
         assert AbsPath(file).exists
 
     # test rmdir(dry_run=False)
-    AutoURI(prefix).rmdir(dry_run=False)
+    AbsPath(prefix).rmdir(dry_run=False)
     for file in all_files:
         assert not AbsPath(file).exists
+    assert not os.path.exists(empty_sub_dir)    
+    assert not os.path.exists(prefix)
 
 
 # original methods in AbsPath

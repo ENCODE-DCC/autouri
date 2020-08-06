@@ -277,17 +277,12 @@ def test_gcsuri_read(gcs_v6_txt):
     assert u.read(byte=True) == v6_txt_contents().encode()
 
 
-def test_gcsuri_find_all_files_and_rmdir(gcs_test_path):
-    """Test two methods:
-        - find_all_files()
-        - rmdir()
-
-    Make a directory structure with empty files.
+def test_gcsuri_find_all_files(gcs_test_path):
+    """Make a directory structure with empty files.
 
     Check if find_all_files() returns correct file (not sub-directory) paths.
-    Check if rmdir() deletes all empty files on given $prefix.
     """
-    prefix = os.path.join(gcs_test_path, 'test_gcsuri_find_all_files_and_rmdir')
+    prefix = os.path.join(gcs_test_path, 'test_gcsuri_find_all_files')
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
     # test find_all_files()
@@ -296,13 +291,22 @@ def test_gcsuri_find_all_files_and_rmdir(gcs_test_path):
     for file in all_files:
         assert GCSURI(file).exists
 
+
+def test_gcsuri_rmdir(gcs_test_path):
+    """Make a directory structure with empty files.
+
+    Check if rmdir() deletes all empty files on given $prefix.
+    """
+    prefix = os.path.join(gcs_test_path, 'test_gcsuri_rmdir')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
+
     # test rmdir(dry_run=True)
-    AutoURI(prefix).rmdir(dry_run=True)
+    GCSURI(prefix).rmdir(dry_run=True)
     for file in all_files:
         assert GCSURI(file).exists
 
     # test rmdir(dry_run=False)
-    AutoURI(prefix).rmdir(dry_run=False)
+    GCSURI(prefix).rmdir(dry_run=False)
     for file in all_files:
         assert not GCSURI(file).exists
 

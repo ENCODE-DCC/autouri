@@ -276,18 +276,26 @@ def test_httpurl_read(url_v6_txt):
     assert u.read(byte=True) == v6_txt_contents().encode()
 
 
-def test_httpurl_find_all_files_and_rmdir(url_test_path):
+def test_httpurl_find_all_files(url_test_path):
     """Test two methods which are not supported (implemented).:
         - find_all_files()
         - rmdir()
     """
-    prefix = os.path.join(url_test_path, 'test_httpurl_find_all_files_and_rmdir')
+    prefix = os.path.join(url_test_path, 'test_httpurl_find_all_files')
 
     with pytest.raises(NotImplementedError):
         HTTPURL(prefix).find_all_files()
 
+
+def test_httpurl_rmdir(url_test_path):
+    """Test two methods which are not supported (implemented).:
+        - find_all_files()
+        - rmdir()
+    """
+    prefix = os.path.join(url_test_path, 'test_httpurl_rmdir')
+
     with pytest.raises(NotImplementedError):
-        AutoURI(prefix).rmdir()
+        HTTPURL(prefix).rmdir()
 
 
 # original methods in HTTPURL
