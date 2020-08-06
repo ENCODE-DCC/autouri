@@ -1,84 +1,77 @@
 #!/usr/bin/env python3
 import hashlib
 import os
-import pytest
 import time
-from filelock import BaseFileLock
-from typing import Any, Tuple, Union
+from typing import Any, Tuple
+
+import pytest
 
 from autouri.autouri import AutoURI, URIBase
 from autouri.gcsuri import GCSURI
 from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 
-from .files import (
-    v6_txt_contents,
-    common_paths,
-    recurse_raise_if_uri_not_exist,
-    make_files_in_dir,
-)
+from .files import common_paths, v6_txt_contents
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_uri(path) -> Any:
-    assert HTTPURL(path).uri == \
-            path
+    assert HTTPURL(path).uri == path
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_uri_wo_ext(path) -> str:
-    assert HTTPURL(path).uri_wo_ext == \
-            os.path.splitext(path.split('?', 1)[0])[0]
+    assert HTTPURL(path).uri_wo_ext == os.path.splitext(path.split('?', 1)[0])[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_uri_wo_scheme(path) -> str:
-    assert HTTPURL(path).uri_wo_scheme == \
-            path.replace('https://', '', 1).replace('http://', '', 1)
+    assert HTTPURL(path).uri_wo_scheme == path.replace('https://', '', 1).replace(
+        'http://', '', 1
+    )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_is_valid(path) -> bool:
     """Also tests AutoURI auto-conversion since it's based on is_valid property
     """
-    expected = path.startswith(('https://', 'http://',))
+    expected = path.startswith(('https://', 'http://'))
     assert HTTPURL(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == HTTPURL
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_dirname(path) -> str:
-    assert HTTPURL(path).dirname == \
-            os.path.dirname(path)
+    assert HTTPURL(path).dirname == os.path.dirname(path)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_dirname_wo_scheme(path) -> str:
-    assert HTTPURL(path).dirname_wo_scheme == \
-            os.path.dirname(path).replace('https://', '', 1).replace('http://', '', 1)
+    assert HTTPURL(path).dirname_wo_scheme == os.path.dirname(path).replace(
+        'https://', '', 1
+    ).replace('http://', '', 1)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_loc_dirname(path) -> str:
-    assert HTTPURL(path).loc_dirname == \
-            hashlib.md5(path.encode('utf-8')).hexdigest()
-            
+    assert HTTPURL(path).loc_dirname == hashlib.md5(path.encode('utf-8')).hexdigest()
+
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_basename(path) -> str:
-    assert HTTPURL(path).basename == \
-            os.path.basename(path).split('?', 1)[0]
+    assert HTTPURL(path).basename == os.path.basename(path).split('?', 1)[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_basename_wo_ext(path) -> str:
-    assert HTTPURL(path).basename_wo_ext == \
-            os.path.splitext(os.path.basename(path).split('?', 1)[0])[0]
+    assert (
+        HTTPURL(path).basename_wo_ext
+        == os.path.splitext(os.path.basename(path).split('?', 1)[0])[0]
+    )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_httpurl_ext(path) -> str:
-    assert HTTPURL(path).ext == \
-            os.path.splitext(path.split('?', 1)[0])[1]
+    assert HTTPURL(path).ext == os.path.splitext(path.split('?', 1)[0])[1]
 
 
 def test_httpurl_exists(url_v6_txt):
@@ -120,7 +113,7 @@ def test_httpurl_md5(url_v6_txt, v6_txt_md5_hash):
 
 
 def test_httpurl_md5_from_file(gcs_v6_txt_url, url_v6_txt, v6_txt_md5_hash):
-    u_gcs_md5 = GCSURI(gcs_v6_txt_url + URIBase.MD5_FILE_EXT)    
+    u_gcs_md5 = GCSURI(gcs_v6_txt_url + URIBase.MD5_FILE_EXT)
     if u_gcs_md5.exists:
         u_gcs_md5.rm()
     u_md5 = HTTPURL(url_v6_txt + URIBase.MD5_FILE_EXT)
@@ -128,27 +121,21 @@ def test_httpurl_md5_from_file(gcs_v6_txt_url, url_v6_txt, v6_txt_md5_hash):
     assert not u_gcs_md5.exists
     assert not u_md5.exists
     u = HTTPURL(url_v6_txt)
-    assert u.md5_from_file == None
+    assert u.md5_from_file is None
 
-    m = u.get_metadata(make_md5_file=True)
     # HTTPURL should not make md5 file even with make_md5_file=True
     assert not u_md5.exists
-    assert u.md5_from_file == None
-    
-    # nevertheless AutoURI should be able to read from http://*.md5
-    # make a temporary .md5 file on GCS
-    # u_gcs_md5.write(v6_txt_md5_hash)
-    # assert u.md5_from_file == v6_txt_md5_hash
-    # u_gcs_md5.rm()
+    assert u.md5_from_file is None
 
 
 def test_httpurl_md5_file_uri(url_v6_txt):
-    assert HTTPURL(url_v6_txt + URIBase.MD5_FILE_EXT).uri == url_v6_txt + URIBase.MD5_FILE_EXT
+    assert (
+        HTTPURL(url_v6_txt + URIBase.MD5_FILE_EXT).uri
+        == url_v6_txt + URIBase.MD5_FILE_EXT
+    )
 
 
-def test_httpurl_cp_url(
-    url_v6_txt,
-    url_test_path) -> 'AutoURI':
+def test_httpurl_cp_url(url_v6_txt, url_test_path) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: url -> url
             This will fail as intended since URL is read-only.
@@ -164,10 +151,8 @@ def test_httpurl_cp_url(
 
 
 def test_httpurl_cp(
-    url_v6_txt,
-    local_test_path,
-    s3_test_path,
-    gcs_test_path) -> 'AutoURI':
+    url_v6_txt, local_test_path, s3_test_path, gcs_test_path
+) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: url -> local
         s3_test_path: url -> s3
@@ -186,7 +171,7 @@ def test_httpurl_cp(
     u = HTTPURL(url_v6_txt)
     basename = os.path.basename(url_v6_txt)
 
-    for test_path in (local_test_path, s3_test_path, gcs_test_path,):
+    for test_path in (local_test_path, s3_test_path, gcs_test_path):
         u_dest = AutoURI(os.path.join(test_path, 'test_httpurl_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -213,7 +198,7 @@ def test_httpurl_cp(
         time.sleep(1)
         _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
-        # new time should be larger if it's overwritten as intended        
+        # new time should be larger if it's overwritten as intended
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
 
         # copy with checksum when target exists
@@ -257,7 +242,7 @@ def test_httpurl_get_metadata(url_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m1.size == v6_txt_size
 
     m2 = u.get_metadata(skip_md5=True)
-    assert m2.md5 == None
+    assert m2.md5 is None
     assert m2.size == v6_txt_size
 
     u_md5 = HTTPURL(url_v6_txt + '.md5')
@@ -299,7 +284,7 @@ def test_httpurl_get_path_sep() -> str:
 
 
 def test_httpurl_get_schemes() -> Tuple[str, ...]:
-    assert HTTPURL.get_schemes() == ('http://', 'https://',)
+    assert HTTPURL.get_schemes() == ('http://', 'https://')
 
 
 def test_httpurl_get_loc_suffix() -> str:
@@ -313,18 +298,16 @@ def test_httpurl_get_loc_prefix() -> str:
 
 
 def test_httpurl_localize(
-        url_test_path,
-        gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt,
-    ) -> Tuple[str, bool]:
+    url_test_path, gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt
+) -> Tuple[str, bool]:
     """Localize should fail.
     """
-    loc_prefix = os.path.join(url_test_path, 'test_httpurl_localize')    
+    loc_prefix = os.path.join(url_test_path, 'test_httpurl_localize')
 
     for j1_json in (gcs_j1_json,):
         # localization from local storage
         u_j1_json = AutoURI(j1_json)
         loc_prefix_ = loc_prefix + u_j1_json.__class__.get_loc_suffix()
-        basename = u_j1_json.basename
 
         # for localization both with or without recursive
         # nothing should be localized actually
@@ -332,6 +315,5 @@ def test_httpurl_localize(
         # so loc_prefix directory itself shouldn't be created
         with pytest.raises(ReadOnlyStorageError):
             loc_uri, localized = HTTPURL.localize(
-                u_j1_json,
-                recursive=False,
-                loc_prefix=loc_prefix_)
+                u_j1_json, recursive=False, loc_prefix=loc_prefix_
+            )

@@ -1,6 +1,5 @@
 import setuptools
 
-
 with open('README.md', 'r') as fh:
     long_description = fh.read()
 
@@ -22,9 +21,12 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
     ],
     install_requires=[
-        'requests', 'pyopenssl',
+        'requests',
+        'pyopenssl',
         'google-cloud-storage',
-        'boto3', 'awscli',
-        'dateparser', 'filelock'
-    ]
+        'boto3',
+        'awscli',
+        'dateparser',
+        'filelock',
+    ],
 )

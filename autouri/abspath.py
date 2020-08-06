@@ -4,12 +4,13 @@ import hashlib
 import logging
 import os
 import shutil
-from filelock import SoftFileLock
-from shutil import copyfile, SameFileError
-from typing import Dict, Optional, Union
-from .autouri import URIBase, AutoURI
-from .metadata import URIMetadata, get_seconds_from_epoch
+from shutil import SameFileError, copyfile
+from typing import Dict, Optional
 
+from filelock import SoftFileLock
+
+from .autouri import AutoURI, URIBase
+from .metadata import URIMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,7 @@ class AbsPath(URIBase):
         MD5_CALC_CHUNK_SIZE:
             Chunk size to calculate md5 hash of a local file.
     """
+
     MAP_PATH_TO_URL: Dict[str, str] = dict()
     MD5_CALC_CHUNK_SIZE: int = 4096
 
@@ -46,9 +48,7 @@ class AbsPath(URIBase):
         """
         if not os.path.exists(self._uri):
             raise FileNotFoundError(
-                'Directory does not exist. deleted already? {dir}'.format(
-                    dir=self._uri
-                )
+                'Directory does not exist. deleted already? {dir}'.format(dir=self._uri)
             )
         if dry_run:
             super().rmdir(dry_run=True, no_lock=no_lock)
@@ -69,7 +69,7 @@ class AbsPath(URIBase):
             timeout = AbsPath.LOCK_TIMEOUT
         # create directory and use default poll_interval
         u_lock = AutoURI(self._uri + AbsPath.LOCK_FILE_EXT)
-        u_lock.mkdir_dirname()       
+        u_lock.mkdir_dirname()
         return SoftFileLock(u_lock._uri, timeout=timeout)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
@@ -87,11 +87,7 @@ class AbsPath(URIBase):
                 if make_md5_file:
                     self.md5_file_uri.write(md5)
 
-        return URIMetadata(
-            exists=ex,
-            mtime=mt,
-            size=sz,
-            md5=md5)
+        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         if byte:
@@ -127,15 +123,16 @@ class AbsPath(URIBase):
         """
         dest_uri = AutoURI(dest_uri)
 
-        if isinstance(dest_uri, AbsPath):            
+        if isinstance(dest_uri, AbsPath):
             dest_uri.mkdir_dirname()
             try:
                 copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
-            except SameFileError as e:
+            except SameFileError:
                 logger.debug(
                     'cp: ignored SameFileError. src={src}, dest={dest}'.format(
-                        src=self._uri,
-                        dest=dest_uri._uri))
+                        src=self._uri, dest=dest_uri._uri
+                    )
+                )
                 if os.path.islink(dest_uri._uri):
                     dest_uri._rm()
                     copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
@@ -167,8 +164,8 @@ class AbsPath(URIBase):
         os.makedirs(self.dirname, exist_ok=True)
         if not os.access(self.dirname, os.W_OK):
             raise PermissionError(
-                'No permission to write on directory: {d}'.format(
-                    d=self.dirname))
+                'No permission to write on directory: {d}'.format(d=self.dirname)
+            )
         return
 
     def soft_link(self, target, force=False):
@@ -183,8 +180,9 @@ class AbsPath(URIBase):
         """
         target = AbsPath(target)
         if not target.is_valid:
-            raise ValueError('Target path is not a valid abs path: {t}.'.format(
-                t=target.uri))
+            raise ValueError(
+                'Target path is not a valid abs path: {t}.'.format(t=target.uri)
+            )
         try:
             target.mkdir_dirname()
             os.symlink(self._uri, target._uri)
@@ -215,9 +213,10 @@ class AbsPath(URIBase):
 
     @staticmethod
     def init_abspath(
-        loc_prefix: Optional[str]=None,
-        map_path_to_url: Optional[Dict[str, str]]=None,
-        md5_calc_chunk_size: Optional[int]=None):
+        loc_prefix: Optional[str] = None,
+        map_path_to_url: Optional[Dict[str, str]] = None,
+        md5_calc_chunk_size: Optional[int] = None,
+    ):
         if loc_prefix is not None:
             AbsPath.LOC_PREFIX = loc_prefix
         if map_path_to_url is not None:

@@ -1,38 +1,35 @@
 #!/usr/bin/env python3
 import os
-import pytest
 import time
-from filelock import BaseFileLock
-from typing import Any, Tuple, Union
+from typing import Any, Tuple
+
+import pytest
 
 from autouri.autouri import AutoURI, URIBase
 from autouri.gcsuri import GCSURI
 from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 
 from .files import (
-    v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist,
     make_files_in_dir,
+    recurse_raise_if_uri_not_exist,
+    v6_txt_contents,
 )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_uri(path) -> Any:
-    assert GCSURI(path).uri == \
-            path
+    assert GCSURI(path).uri == path
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_uri_wo_ext(path) -> str:
-    assert GCSURI(path).uri_wo_ext == \
-            os.path.splitext(path)[0]
+    assert GCSURI(path).uri_wo_ext == os.path.splitext(path)[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_uri_wo_scheme(path) -> str:
-    assert GCSURI(path).uri_wo_scheme == \
-            path.replace('gs://', '', 1)
+    assert GCSURI(path).uri_wo_scheme == path.replace('gs://', '', 1)
 
 
 @pytest.mark.parametrize('path', common_paths())
@@ -46,38 +43,36 @@ def test_gcsuri_is_valid(path) -> bool:
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_dirname(path) -> str:
-    assert GCSURI(path).dirname == \
-            os.path.dirname(path)
+    assert GCSURI(path).dirname == os.path.dirname(path)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_dirname_wo_scheme(path) -> str:
-    assert GCSURI(path).dirname_wo_scheme == \
-            os.path.dirname(path).replace('gs://', '', 1)
+    assert GCSURI(path).dirname_wo_scheme == os.path.dirname(path).replace(
+        'gs://', '', 1
+    )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_loc_dirname(path) -> str:
-    assert GCSURI(path).loc_dirname == \
-            os.path.dirname(path).replace('gs://', '', 1).lstrip('/')
+    assert GCSURI(path).loc_dirname == os.path.dirname(path).replace(
+        'gs://', '', 1
+    ).lstrip('/')
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_basename(path) -> str:
-    assert GCSURI(path).basename == \
-            os.path.basename(path)
+    assert GCSURI(path).basename == os.path.basename(path)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_basename_wo_ext(path) -> str:
-    assert GCSURI(path).basename_wo_ext == \
-            os.path.splitext(os.path.basename(path))[0]
+    assert GCSURI(path).basename_wo_ext == os.path.splitext(os.path.basename(path))[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_gcsuri_ext(path) -> str:
-    assert GCSURI(path).ext == \
-            os.path.splitext(path)[1]
+    assert GCSURI(path).ext == os.path.splitext(path)[1]
 
 
 def test_gcsuri_exists(gcs_v6_txt):
@@ -109,27 +104,27 @@ def test_gcsuri_md5_from_file(gcs_v6_txt, v6_txt_md5_hash):
         u_md5.rm()
     assert not u_md5.exists
     u = GCSURI(gcs_v6_txt)
-    assert u.md5_from_file == None
+    assert u.md5_from_file is None
 
-    m = u.get_metadata(make_md5_file=True)
     # GCSURI should not make md5 file even with make_md5_file=True
     assert not u_md5.exists
-    assert u.md5_from_file == None
+    assert u.md5_from_file is None
 
     # nevertheless AutoURI should be able to read from gs://*.md5
     # make a temporary .md5 file
     u_md5.write(v6_txt_md5_hash)
     assert u.md5_from_file == v6_txt_md5_hash
     u_md5.rm()
-    
+
 
 def test_gcsuri_md5_file_uri(gcs_v6_txt):
-    assert GCSURI(gcs_v6_txt + URIBase.MD5_FILE_EXT).uri == gcs_v6_txt + URIBase.MD5_FILE_EXT
+    assert (
+        GCSURI(gcs_v6_txt + URIBase.MD5_FILE_EXT).uri
+        == gcs_v6_txt + URIBase.MD5_FILE_EXT
+    )
 
 
-def test_gcsuri_cp_url(
-    gcs_v6_txt,
-    url_test_path) -> 'AutoURI':
+def test_gcsuri_cp_url(gcs_v6_txt, url_test_path) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: gcs -> url
             This will fail as intended since URL is read-only.
@@ -144,10 +139,8 @@ def test_gcsuri_cp_url(
 
 
 def test_gcsuri_cp(
-    gcs_v6_txt,
-    local_test_path,
-    s3_test_path,
-    gcs_test_path) -> 'AutoURI':
+    gcs_v6_txt, local_test_path, s3_test_path, gcs_test_path
+) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: gcs -> local
         s3_test_path: gcs -> s3
@@ -166,7 +159,7 @@ def test_gcsuri_cp(
     u = GCSURI(gcs_v6_txt)
     basename = os.path.basename(gcs_v6_txt)
 
-    for test_path in (local_test_path, gcs_test_path, s3_test_path,):
+    for test_path in (local_test_path, gcs_test_path, s3_test_path):
         u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -193,7 +186,7 @@ def test_gcsuri_cp(
         time.sleep(1)
         _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
-        # new time should be larger if it's overwritten as intended        
+        # new time should be larger if it's overwritten as intended
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
 
         # copy with checksum when target exists
@@ -258,7 +251,7 @@ def test_gcsuri_get_metadata(gcs_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m1.size == v6_txt_size
 
     m2 = u.get_metadata(skip_md5=True)
-    assert m2.md5 == None
+    assert m2.md5 is None
     assert m2.size == v6_txt_size
 
     u_md5 = GCSURI(gcs_v6_txt + '.md5')
@@ -328,8 +321,14 @@ def test_gcsuri_get_blob(gcs_v6_txt):
 
 def test_gcsuri_get_bucket_path():
     assert GCSURI('gs://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
-    assert GCSURI('gs://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
-    assert GCSURI('gs://ok-test-bucket/hello.txt').get_bucket_path() == ('ok-test-bucket', 'hello.txt')
+    assert GCSURI('gs://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == (
+        'asdflskfjljkfc-asdf',
+        'ddfjlfd/d.log',
+    )
+    assert GCSURI('gs://ok-test-bucket/hello.txt').get_bucket_path() == (
+        'ok-test-bucket',
+        'hello.txt',
+    )
 
 
 def test_gcsuri_get_presigned_url(gcs_v6_txt, gcp_private_key_file):
@@ -373,18 +372,33 @@ def test_gcsuri_get_loc_prefix() -> str:
     assert GCSURI.get_loc_prefix() == ''
 
 
-
 def test_gcsuri_localize(
-        gcs_test_path,
-        local_j1_json, local_v41_json, local_v421_tsv, local_v5_csv, local_v6_txt,
-        s3_j1_json, s3_v41_json, s3_v421_tsv, s3_v5_csv, s3_v6_txt,
-        gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt,
-        url_j1_json, url_v41_json, url_v421_tsv, url_v5_csv, url_v6_txt
-    ) -> Tuple[str, bool]:
+    gcs_test_path,
+    local_j1_json,
+    local_v41_json,
+    local_v421_tsv,
+    local_v5_csv,
+    local_v6_txt,
+    s3_j1_json,
+    s3_v41_json,
+    s3_v421_tsv,
+    s3_v5_csv,
+    s3_v6_txt,
+    gcs_j1_json,
+    gcs_v41_json,
+    gcs_v421_tsv,
+    gcs_v5_csv,
+    gcs_v6_txt,
+    url_j1_json,
+    url_v41_json,
+    url_v421_tsv,
+    url_v5_csv,
+    url_v6_txt,
+) -> Tuple[str, bool]:
     """Recursive localization is supported for the following file extensions:
         .json:
             Files defined only in values (not keys) can be recursively localized.
-        .tsv/.csv: 
+        .tsv/.csv:
             Files defined in all values can be recursively localized.
 
     This function will test localizing j1.json file on each remote storage.
@@ -424,7 +438,7 @@ def test_gcsuri_localize(
         recursive:
             j1.json
     """
-    loc_prefix = os.path.join(gcs_test_path, 'test_gcsuri_localize')    
+    loc_prefix = os.path.join(gcs_test_path, 'test_gcsuri_localize')
     # GCSURI.init_gcsuri(use_gsutil_for_s3=True)
 
     for j1_json in (gcs_j1_json,):
@@ -438,18 +452,14 @@ def test_gcsuri_localize(
         # since they are already on same storage
         # so loc_prefix directory itself shouldn't be created
         loc_uri, localized = GCSURI.localize(
-            u_j1_json,
-            recursive=False,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=False, return_flag=True, loc_prefix=loc_prefix_
+        )
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
 
         loc_uri, localized = GCSURI.localize(
-            u_j1_json,
-            recursive=True,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=True, return_flag=True, loc_prefix=loc_prefix_
+        )
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
         # check if all URIs defeind in localized JSON file exist
@@ -462,24 +472,20 @@ def test_gcsuri_localize(
         basename = u_j1_json.basename
 
         loc_uri, localized = GCSURI.localize(
-            u_j1_json,
-            recursive=False,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
-        expected = os.path.join(
-            loc_prefix_, u_j1_json.loc_dirname,
-            u_j1_json.basename)
+            u_j1_json, recursive=False, return_flag=True, loc_prefix=loc_prefix_
+        )
+        expected = os.path.join(loc_prefix_, u_j1_json.loc_dirname, u_j1_json.basename)
         assert loc_uri == expected
         assert localized and AutoURI(expected).exists
 
         loc_uri, localized = GCSURI.localize(
-            u_j1_json,
-            recursive=True,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=True, return_flag=True, loc_prefix=loc_prefix_
+        )
         expected = os.path.join(
-            loc_prefix_, u_j1_json.loc_dirname,
-            u_j1_json.basename_wo_ext + GCSURI.get_loc_suffix() + u_j1_json.ext)
+            loc_prefix_,
+            u_j1_json.loc_dirname,
+            u_j1_json.basename_wo_ext + GCSURI.get_loc_suffix() + u_j1_json.ext,
+        )
         assert loc_uri == expected
         assert localized and AutoURI(expected).exists
         # check if all URIs defeind in localized JSON file exist

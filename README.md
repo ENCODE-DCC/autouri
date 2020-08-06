@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/ENCODE-DCC/autouri.svg?style=svg)](https://circleci.com/gh/ENCODE-DCC/autouri)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![CircleCI](https://circleci.com/gh/ENCODE-DCC/autouri.svg?style=svg)](https://circleci.com/gh/ENCODE-DCC/autouri)
 
 > **IMPORTANT**: If you use `--use-gsutil-for-s3` or `GCSURI.USE_GSUTIL_FOR_S3` then you need to update your `gsutil`. This flag allows a direct transfer between `gs://` and `s3://`. This requires `gsutil` >= 4.47. See this [issue](https://github.com/GoogleCloudPlatform/gsutil/issues/935) for details.
 ```bash
@@ -140,7 +140,7 @@ optional arguments:
 - GCS: Use `gcloud` CLI.
     - Using end-user credentials: You will be asked to enter credentials of your Google account.
         ```
-        $ gcloud init 
+        $ gcloud init
         ```
     - Using service account credentials: If you use a service account and a JSON key file associated with it.
         ```
@@ -161,7 +161,7 @@ optional arguments:
     ```
     machine www.encodeproject.org
     login XXXXXXXX
-    password abcdefghijklmnop         
+    password abcdefghijklmnop
     ```
 
 
@@ -182,5 +182,3 @@ GCS (`gs://bucket-name`)
 
 S3 (`s3://bucket-name`)
   - Object versioning must be turned off.
-
-

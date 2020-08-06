@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Notes about race condition:
 We use soft locks, which watches .lock file to check if appears and disappears.
 
@@ -29,12 +28,8 @@ Important notes:
         We don't allow versioning so keep using unstable soft file lock.
 """
 import os
-import pytest
-import time
 from multiprocessing import Pool
-from typing import Any, Tuple, Union
 
-from autouri.abspath import AbsPath
 from autouri.autouri import AutoURI
 
 from .files import v6_txt_contents
@@ -48,7 +43,7 @@ def write_v6_txt(x):
     s = v6_txt_contents() + str(i)
     u = AutoURI(uri, thread_id=i)
 
-    with u.get_lock(no_lock=False) as lock:
+    with u.get_lock(no_lock=False):
         u.write(s, no_lock=True)
         assert u.read() == s
 
@@ -59,7 +54,7 @@ def run_write_v6_txt(prefix, nth):
     if u.exists:
         u.rm()
     p = Pool(nth)
-    p.map(write_v6_txt, list(zip([s]*nth, range(nth))))
+    p.map(write_v6_txt, list(zip([s] * nth, range(nth))))
     p.close()
     p.join()
 

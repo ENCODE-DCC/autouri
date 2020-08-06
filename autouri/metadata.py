@@ -1,14 +1,13 @@
 """URIMetadata and helper functions for metadata
 """
 import warnings
-from binascii import hexlify
 from base64 import b64decode
+from binascii import hexlify
 from collections import namedtuple
 from datetime import datetime, timezone
+
 from dateparser import parse as dateparser_parse
 from dateutil.parser import parse as dateutil_parse
-from dateutil.tz import tzlocal, tzutc
-
 
 URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
 
@@ -23,7 +22,7 @@ def get_seconds_from_epoch(timestamp: str) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             utc_t = dateutil_parse(timestamp)
-    except:
+    except Exception:
         pass
     if utc_t is None or utc_t.tzname() not in ('UTC', 'Z'):
         utc_t = dateparser_parse(timestamp)
@@ -44,5 +43,5 @@ def parse_md5_str(raw: str) -> str:
     else:
         try:
             return base64_to_hex(raw)
-        except:
-            return None
+        except Exception:
+            pass

@@ -18,11 +18,14 @@ See j1_json_contents() for its detailed structure.
             v6_txt
 """
 import os
+
 from autouri.autouri import AutoURI
-from autouri.loc_aux import recurse_json, recurse_tsv, recurse_csv
+from autouri.loc_aux import recurse_csv, recurse_json, recurse_tsv
 
 
-def j1_json_contents(prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix=''):
+def j1_json_contents(
+    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix=''
+):
     if prefix_v41 is None:
         prefix_v41 = prefix
     if prefix_v421 is None:
@@ -42,11 +45,12 @@ def j1_json_contents(prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, 
         }},
         "k5": "{prefix_v5}/even/deeper/v5{loc_suffix}.csv"
     }}
-    '''.format(        
+    '''.format(
         prefix_v41=prefix_v41,
         prefix_v421=prefix_v421,
         prefix_v5=prefix_v5,
-        loc_suffix=loc_suffix)
+        loc_suffix=loc_suffix,
+    )
 
 
 def v41_json_contents():
@@ -55,7 +59,14 @@ def v41_json_contents():
     return '{ "k1": "v1" }'
 
 
-def v421_tsv_contents(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, loc_suffix='', make_link_to_j1_json=False):
+def v421_tsv_contents(
+    prefix,
+    prefix_v5=None,
+    prefix_v1=None,
+    prefix_v6=None,
+    loc_suffix='',
+    make_link_to_j1_json=False,
+):
     """
     Args:
         make_link_to_j1_json:
@@ -75,7 +86,7 @@ def v421_tsv_contents(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, lo
         'k3\t2.2',
         'k4\tnot/absolute/path',
         'k5\t{prefix_v5}/even/deeper/v5{loc_suffix}.csv',
-        'k6\t{prefix_v6}/v6.txt'
+        'k6\t{prefix_v6}/v6.txt',
     ]
     if make_link_to_j1_json:
         arr.append('k7\t{prefix_v1}/j1.json')
@@ -84,20 +95,23 @@ def v421_tsv_contents(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, lo
         prefix_v5=prefix_v5,
         prefix_v1=prefix_v1,
         prefix_v6=prefix_v6,
-        loc_suffix=loc_suffix)
+        loc_suffix=loc_suffix,
+    )
 
 
 def v5_csv_contents(prefix, prefix_v6=None):
     if prefix_v6 is None:
         prefix_v6 = prefix
-    s = '\n'.join([
-        'k1,v1',
-        'k2,1',
-        'k3,2.2',
-        'k4,not/absolute/path',
-        'k5,s33://not-valid-bucket-address',
-        'k6,{prefix_v6}/v6.txt'
-    ])
+    s = '\n'.join(
+        [
+            'k1,v1',
+            'k2,1',
+            'k3,2.2',
+            'k4,not/absolute/path',
+            'k5,s33://not-valid-bucket-address',
+            'k6,{prefix_v6}/v6.txt',
+        ]
+    )
     return s.format(prefix_v6=prefix_v6)
 
 
@@ -105,54 +119,65 @@ def v6_txt_contents():
     return 'v6: Hello World'
 
 
-def j1_json(prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix='', make=False):
-    u = '{prefix}/j1{loc_suffix}.json'.format(
-        prefix=prefix, loc_suffix=loc_suffix)
+def j1_json(
+    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix='', make=False
+):
+    u = '{prefix}/j1{loc_suffix}.json'.format(prefix=prefix, loc_suffix=loc_suffix)
     if make:
-        AutoURI(u).write(j1_json_contents(
-            prefix=prefix,
-            prefix_v41=prefix_v41,
-            prefix_v421=prefix_v421,
-            prefix_v5=prefix_v5,
-            loc_suffix=loc_suffix))
+        AutoURI(u).write(
+            j1_json_contents(
+                prefix=prefix,
+                prefix_v41=prefix_v41,
+                prefix_v421=prefix_v421,
+                prefix_v5=prefix_v5,
+                loc_suffix=loc_suffix,
+            )
+        )
     return u
 
 
 def v41_json(prefix, make=False):
-    u = '{prefix}/v41.json'.format(
-        prefix=prefix)
+    u = '{prefix}/v41.json'.format(prefix=prefix)
     if make:
         AutoURI(u).write(v41_json_contents())
     return u
 
 
-def v421_tsv(prefix, prefix_v5=None, prefix_v1=None, prefix_v6=None, loc_suffix='', make=False, make_link_to_j1_json=False):
+def v421_tsv(
+    prefix,
+    prefix_v5=None,
+    prefix_v1=None,
+    prefix_v6=None,
+    loc_suffix='',
+    make=False,
+    make_link_to_j1_json=False,
+):
     u = '{prefix}/deeper/v421{loc_suffix}.tsv'.format(
-        prefix=prefix, loc_suffix=loc_suffix)
+        prefix=prefix, loc_suffix=loc_suffix
+    )
     if make:
-        AutoURI(u).write(v421_tsv_contents(
-            prefix=prefix,
-            prefix_v5=prefix_v5,
-            prefix_v1=prefix_v1,
-            prefix_v6=prefix_v6,
-            loc_suffix=loc_suffix,
-            make_link_to_j1_json=make_link_to_j1_json))
+        AutoURI(u).write(
+            v421_tsv_contents(
+                prefix=prefix,
+                prefix_v5=prefix_v5,
+                prefix_v1=prefix_v1,
+                prefix_v6=prefix_v6,
+                loc_suffix=loc_suffix,
+                make_link_to_j1_json=make_link_to_j1_json,
+            )
+        )
     return u
 
 
 def v5_csv(prefix, prefix_v6=None, make=False):
-    u = '{prefix}/even/deeper/v5.csv'.format(
-        prefix=prefix)
+    u = '{prefix}/even/deeper/v5.csv'.format(prefix=prefix)
     if make:
-        AutoURI(u).write(v5_csv_contents(
-            prefix=prefix,
-            prefix_v6=prefix_v6))
+        AutoURI(u).write(v5_csv_contents(prefix=prefix, prefix_v6=prefix_v6))
     return u
 
 
 def v6_txt(prefix, make=False):
-    u = '{prefix}/v6.txt'.format(
-        prefix=prefix)
+    u = '{prefix}/v6.txt'.format(prefix=prefix)
     if make:
         AutoURI(u).write(v6_txt_contents())
     return u

@@ -2,16 +2,17 @@
     S3 Object versioning must be turned off
 """
 import logging
-import requests
 import time
+from tempfile import NamedTemporaryFile
+from typing import Optional, Tuple
+
+import requests
 from boto3 import client
 from botocore.exceptions import ClientError
 from filelock import BaseFileLock
-from tempfile import NamedTemporaryFile
-from typing import Tuple, Optional
-from .autouri import URIBase, AutoURI
-from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
+from .autouri import AutoURI, URIBase
+from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +29,11 @@ class S3URILock(BaseFileLock):
     It waits for a short time (self._lock_read_delay) and checks if written .lock has the same id(self).
     self._lock_read_delay is set as poll_interval/10.
     """
-    def __init__(
-        self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
+
+    def __init__(self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
-        self._lock_read_delay = self._poll_interval/10.0
+        self._lock_read_delay = self._poll_interval / 10.0
 
     def acquire(self, timeout=None, poll_intervall=5.0):
         """To use self._poll_interval instead of poll_intervall in args.
@@ -81,6 +82,7 @@ class S3URI(URIBase):
         _S3_PUBLIC_URL_FORMAT:
             End point for a bucket with public access + key path
     """
+
     DURATION_PRESIGNED_URL: int = 4233600
 
     _CACHED_BOTO3_CLIENT_PER_THREAD = {}
@@ -101,7 +103,8 @@ class S3URI(URIBase):
         return S3URILock(
             self._uri + S3URI.LOCK_FILE_EXT,
             timeout=timeout,
-            poll_interval=poll_interval)
+            poll_interval=poll_interval,
+        )
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         ex, mt, sz, md5 = False, None, None, None
@@ -110,7 +113,9 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         try:
-            m = cl.head_object(Bucket=bucket, Key=path)['ResponseMetadata']['HTTPHeaders']
+            m = cl.head_object(Bucket=bucket, Key=path)['ResponseMetadata'][
+                'HTTPHeaders'
+            ]
             # make keys lower-case
             h = {k.lower(): v for k, v in m.items()}
             ex = True
@@ -122,7 +127,7 @@ class S3URI(URIBase):
                     md5 = parse_md5_str(h['etag'])
                 if md5 is None:
                     # make_md5_file is ignored for S3URI
-                    md5 = self.md5_from_file                    
+                    md5 = self.md5_from_file
 
             if 'content-length' in h:
                 sz = int(h['content-length'])
@@ -130,14 +135,10 @@ class S3URI(URIBase):
             if 'last-modified' in h:
                 mt = get_seconds_from_epoch(h['last-modified'])
 
-        except Exception as e:
+        except Exception:
             pass
 
-        return URIMetadata(
-            exists=ex,
-            mtime=mt,
-            size=sz,
-            md5=md5)
+        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         cl = S3URI.get_boto3_client(self._thread_id)
@@ -183,7 +184,7 @@ class S3URI(URIBase):
         return
 
     def _cp(self, dest_uri):
-        """Copy from S3URI to 
+        """Copy from S3URI to
             S3URI
             AbsPath
         """
@@ -196,11 +197,10 @@ class S3URI(URIBase):
         if isinstance(dest_uri, S3URI):
             dest_bucket, dest_path = dest_uri.get_bucket_path()
             cl.copy_object(
-                CopySource={
-                    'Bucket': bucket,
-                    'Key': path},
+                CopySource={'Bucket': bucket, 'Key': path},
                 Bucket=dest_bucket,
-                Key=dest_path)
+                Key=dest_path,
+            )
             return True
 
         elif isinstance(dest_uri, AbsPath):
@@ -223,26 +223,23 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         if isinstance(src_uri, AbsPath):
-            p = cl.upload_file(
-                Filename=src_uri._uri,
-                Bucket=bucket,
-                Key=path)
+            cl.upload_file(Filename=src_uri._uri, Bucket=bucket, Key=path)
             return True
 
         elif isinstance(src_uri, HTTPURL):
             r = requests.get(
-                src_uri._uri, stream=True, allow_redirects=True,
-                headers=requests.utils.default_headers())
+                src_uri._uri,
+                stream=True,
+                allow_redirects=True,
+                headers=requests.utils.default_headers(),
+            )
             r.raise_for_status()
             with NamedTemporaryFile() as fp:
                 for chunk in r.iter_content(HTTPURL.get_http_chunk_size()):
                     fp.write(chunk)
                 fp.seek(0)
-                cl.upload_fileobj(
-                    Fileobj=fp,
-                    Bucket=bucket,
-                    Key=path)
-            return True        
+                cl.upload_fileobj(Fileobj=fp, Bucket=bucket, Key=path)
+            return True
         return False
 
     def get_bucket_path(self) -> Tuple[str, str]:
@@ -260,7 +257,7 @@ class S3URI(URIBase):
         """
         Args:
             duration: Duration in seconds. This is ignored if use_cached is on.
-            use_cached: Use a cached URL. 
+            use_cached: Use a cached URL.
         """
         cache = S3URI._CACHED_PRESIGNED_URLS
         if use_cached:
@@ -270,9 +267,8 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
         duration = duration if duration is not None else S3URI.DURATION_PRESIGNED_URL
         url = cl.generate_presigned_url(
-            'get_object',
-            Params={'Bucket': bucket, 'Key': path},
-            ExpiresIn=duration)
+            'get_object', Params={'Bucket': bucket, 'Key': path}, ExpiresIn=duration
+        )
         cache[self._uri] = url
         return url
 
@@ -291,10 +287,9 @@ class S3URI(URIBase):
 
     @staticmethod
     def init_s3uri(
-        loc_prefix: Optional[str]=None,
-        duration_presigned_url: Optional[int]=None):
+        loc_prefix: Optional[str] = None, duration_presigned_url: Optional[int] = None
+    ):
         if loc_prefix is not None:
             S3URI.LOC_PREFIX = loc_prefix
         if duration_presigned_url is not None:
             S3URI.DURATION_PRESIGNED_URL = duration_presigned_url
-

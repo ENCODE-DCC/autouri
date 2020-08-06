@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import os
-import pytest
 import time
-from filelock import BaseFileLock
-from typing import Any, Tuple, Union
+from typing import Any, Tuple
+
+import pytest
 from requests.exceptions import HTTPError
 
 from autouri.autouri import AutoURI, URIBase
@@ -11,29 +11,26 @@ from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 from autouri.s3uri import S3URI
 
 from .files import (
-    v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist,
     make_files_in_dir,
+    recurse_raise_if_uri_not_exist,
+    v6_txt_contents,
 )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_uri(path) -> Any:
-    assert S3URI(path).uri == \
-            path
+    assert S3URI(path).uri == path
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_uri_wo_ext(path) -> str:
-    assert S3URI(path).uri_wo_ext == \
-            os.path.splitext(path)[0]
+    assert S3URI(path).uri_wo_ext == os.path.splitext(path)[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_uri_wo_scheme(path) -> str:
-    assert S3URI(path).uri_wo_scheme == \
-            path.replace('s3://', '', 1)
+    assert S3URI(path).uri_wo_scheme == path.replace('s3://', '', 1)
 
 
 @pytest.mark.parametrize('path', common_paths())
@@ -47,38 +44,36 @@ def test_s3uri_is_valid(path) -> bool:
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_dirname(path) -> str:
-    assert S3URI(path).dirname == \
-            os.path.dirname(path)
+    assert S3URI(path).dirname == os.path.dirname(path)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_dirname_wo_scheme(path) -> str:
-    assert S3URI(path).dirname_wo_scheme == \
-            os.path.dirname(path).replace('s3://', '', 1)
+    assert S3URI(path).dirname_wo_scheme == os.path.dirname(path).replace(
+        's3://', '', 1
+    )
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_loc_dirname(path) -> str:
-    assert S3URI(path).loc_dirname == \
-            os.path.dirname(path).replace('s3://', '', 1).lstrip('/')
+    assert S3URI(path).loc_dirname == os.path.dirname(path).replace(
+        's3://', '', 1
+    ).lstrip('/')
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_basename(path) -> str:
-    assert S3URI(path).basename == \
-            os.path.basename(path)
+    assert S3URI(path).basename == os.path.basename(path)
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_basename_wo_ext(path) -> str:
-    assert S3URI(path).basename_wo_ext == \
-            os.path.splitext(os.path.basename(path))[0]
+    assert S3URI(path).basename_wo_ext == os.path.splitext(os.path.basename(path))[0]
 
 
 @pytest.mark.parametrize('path', common_paths())
 def test_s3uri_ext(path) -> str:
-    assert S3URI(path).ext == \
-            os.path.splitext(path)[1]
+    assert S3URI(path).ext == os.path.splitext(path)[1]
 
 
 def test_s3uri_exists(s3_v6_txt):
@@ -110,12 +105,11 @@ def test_s3uri_md5_from_file(s3_v6_txt, v6_txt_md5_hash):
         u_md5.rm()
     assert not u_md5.exists
     u = S3URI(s3_v6_txt)
-    assert u.md5_from_file == None
+    assert u.md5_from_file is None
 
-    m = u.get_metadata(make_md5_file=True)
     # S3URI should not make md5 file even with make_md5_file=True
     assert not u_md5.exists
-    assert u.md5_from_file == None
+    assert u.md5_from_file is None
 
     # nevertheless AutoURI should be able to read from s3://*.md5
     # make a temporary .md5 file
@@ -125,12 +119,12 @@ def test_s3uri_md5_from_file(s3_v6_txt, v6_txt_md5_hash):
 
 
 def test_s3uri_md5_file_uri(s3_v6_txt):
-    assert S3URI(s3_v6_txt + URIBase.MD5_FILE_EXT).uri == s3_v6_txt + URIBase.MD5_FILE_EXT
+    assert (
+        S3URI(s3_v6_txt + URIBase.MD5_FILE_EXT).uri == s3_v6_txt + URIBase.MD5_FILE_EXT
+    )
 
 
-def test_s3uri_cp_url(
-    s3_v6_txt,
-    url_test_path) -> 'AutoURI':
+def test_s3uri_cp_url(s3_v6_txt, url_test_path) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: s3 -> url
             This will fail as intended since URL is read-only.
@@ -145,11 +139,7 @@ def test_s3uri_cp_url(
             _, ret = u.cp(u_dest, return_flag=True)
 
 
-def test_s3uri_cp(
-    s3_v6_txt,
-    local_test_path,
-    s3_test_path,
-    gcs_test_path) -> 'AutoURI':
+def test_s3uri_cp(s3_v6_txt, local_test_path, s3_test_path, gcs_test_path) -> 'AutoURI':
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: s3 -> local
         s3_test_path: s3 -> s3
@@ -168,7 +158,7 @@ def test_s3uri_cp(
     u = S3URI(s3_v6_txt)
     basename = os.path.basename(s3_v6_txt)
 
-    for test_path in (local_test_path, s3_test_path, gcs_test_path,):
+    for test_path in (local_test_path, s3_test_path, gcs_test_path):
         u_dest = AutoURI(os.path.join(test_path, 'test_s3uri_cp', basename))
         if u_dest.exists:
             u_dest.rm()
@@ -195,7 +185,7 @@ def test_s3uri_cp(
         time.sleep(1)
         _, ret = u.cp(u_dest, no_checksum=True, return_flag=True)
         # compare new mtime vs old mtime
-        # new time should be larger if it's overwritten as intended        
+        # new time should be larger if it's overwritten as intended
         assert u_dest.mtime > m_dest.mtime and u.read() == u_dest.read() and ret == 0
 
         # copy with checksum when target exists
@@ -260,7 +250,7 @@ def test_s3uri_get_metadata(s3_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m1.size == v6_txt_size
 
     m2 = u.get_metadata(skip_md5=True)
-    assert m2.md5 == None
+    assert m2.md5 is None
     assert m2.size == v6_txt_size
 
     u_md5 = S3URI(s3_v6_txt + '.md5')
@@ -315,8 +305,14 @@ def test_s3uri_rmdir(s3_test_path):
 # original methods in S3URI
 def test_s3uri_get_bucket_path():
     assert S3URI('s3://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
-    assert S3URI('s3://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == ('asdflskfjljkfc-asdf', 'ddfjlfd/d.log')
-    assert S3URI('s3://ok-test-bucket/hello.txt').get_bucket_path() == ('ok-test-bucket', 'hello.txt')
+    assert S3URI('s3://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == (
+        'asdflskfjljkfc-asdf',
+        'ddfjlfd/d.log',
+    )
+    assert S3URI('s3://ok-test-bucket/hello.txt').get_bucket_path() == (
+        'ok-test-bucket',
+        'hello.txt',
+    )
 
 
 def test_s3uri_get_presigned_url(s3_v6_txt):
@@ -330,7 +326,7 @@ def test_s3uri_get_presigned_url(s3_v6_txt):
     # should expire in 2 seconds
     with pytest.raises(HTTPError):
         # forbidden since it's already expired
-        s = u_url.read()
+        u_url.read()
 
 
 def test_s3uri_get_public_url(s3_public_url_test_v6_file):
@@ -361,18 +357,33 @@ def test_s3uri_get_loc_prefix() -> str:
     assert S3URI.get_loc_prefix() == ''
 
 
-
 def test_s3uri_localize(
-        s3_test_path,
-        local_j1_json, local_v41_json, local_v421_tsv, local_v5_csv, local_v6_txt,
-        s3_j1_json, s3_v41_json, s3_v421_tsv, s3_v5_csv, s3_v6_txt,
-        gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt,
-        url_j1_json, url_v41_json, url_v421_tsv, url_v5_csv, url_v6_txt
-    ) -> Tuple[str, bool]:
+    s3_test_path,
+    local_j1_json,
+    local_v41_json,
+    local_v421_tsv,
+    local_v5_csv,
+    local_v6_txt,
+    s3_j1_json,
+    s3_v41_json,
+    s3_v421_tsv,
+    s3_v5_csv,
+    s3_v6_txt,
+    gcs_j1_json,
+    gcs_v41_json,
+    gcs_v421_tsv,
+    gcs_v5_csv,
+    gcs_v6_txt,
+    url_j1_json,
+    url_v41_json,
+    url_v421_tsv,
+    url_v5_csv,
+    url_v6_txt,
+) -> Tuple[str, bool]:
     """Recursive localization is supported for the following file extensions:
         .json:
             Files defined only in values (not keys) can be recursively localized.
-        .tsv/.csv: 
+        .tsv/.csv:
             Files defined in all values can be recursively localized.
 
     This function will test localizing j1.json file on each remote storage.
@@ -412,7 +423,7 @@ def test_s3uri_localize(
         recursive:
             j1.json
     """
-    loc_prefix = os.path.join(s3_test_path, 'test_s3uri_localize')    
+    loc_prefix = os.path.join(s3_test_path, 'test_s3uri_localize')
 
     for j1_json in (s3_j1_json,):
         # localization from same storage
@@ -425,18 +436,14 @@ def test_s3uri_localize(
         # since they are already on same storage
         # so loc_prefix directory itself shouldn't be created
         loc_uri, localized = S3URI.localize(
-            u_j1_json,
-            recursive=False,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=False, return_flag=True, loc_prefix=loc_prefix_
+        )
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
 
         loc_uri, localized = S3URI.localize(
-            u_j1_json,
-            recursive=True,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=True, return_flag=True, loc_prefix=loc_prefix_
+        )
         assert loc_uri == u_j1_json.uri and not localized
         assert not AutoURI(os.path.join(loc_prefix_, basename)).exists
         # check if all URIs defeind in localized JSON file exist
@@ -449,24 +456,20 @@ def test_s3uri_localize(
         basename = u_j1_json.basename
 
         loc_uri, localized = S3URI.localize(
-            u_j1_json,
-            recursive=False,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
-        expected = os.path.join(
-            loc_prefix_, u_j1_json.loc_dirname,
-            u_j1_json.basename)
+            u_j1_json, recursive=False, return_flag=True, loc_prefix=loc_prefix_
+        )
+        expected = os.path.join(loc_prefix_, u_j1_json.loc_dirname, u_j1_json.basename)
         assert loc_uri == expected
         assert localized and AutoURI(expected).exists
 
         loc_uri, localized = S3URI.localize(
-            u_j1_json,
-            recursive=True,
-            return_flag=True,
-            loc_prefix=loc_prefix_)
+            u_j1_json, recursive=True, return_flag=True, loc_prefix=loc_prefix_
+        )
         expected = os.path.join(
-            loc_prefix_, u_j1_json.loc_dirname,
-            u_j1_json.basename_wo_ext + S3URI.get_loc_suffix() + u_j1_json.ext)
+            loc_prefix_,
+            u_j1_json.loc_dirname,
+            u_j1_json.basename_wo_ext + S3URI.get_loc_suffix() + u_j1_json.ext,
+        )
         assert loc_uri == expected
         assert localized and AutoURI(expected).exists
         # check if all URIs defeind in localized JSON file exist
