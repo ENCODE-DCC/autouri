@@ -13,7 +13,8 @@ from autouri.s3uri import S3URI
 from .files import (
     v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist
+    recurse_raise_if_uri_not_exist,
+    make_files_in_dir,
 )
 
 
@@ -276,6 +277,39 @@ def test_s3uri_read(s3_v6_txt):
     u = S3URI(s3_v6_txt)
     assert u.read() == v6_txt_contents()
     assert u.read(byte=True) == v6_txt_contents().encode()
+
+
+def test_s3uri_find_all_files(s3_test_path):
+    """Make a directory structure with empty files.
+
+    Check if find_all_files() returns correct file (not sub-directory) paths.
+    """
+    prefix = os.path.join(s3_test_path, 'test_s3uri_find_all_files')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
+
+    all_files_found = S3URI(prefix).find_all_files()
+    assert sorted(all_files_found) == sorted(all_files)
+    for file in all_files:
+        assert S3URI(file).exists
+
+
+def test_s3uri_rmdir(s3_test_path):
+    """Make a directory structure with empty files.
+
+    Check if rmdir() deletes all empty files on given $prefix.
+    """
+    prefix = os.path.join(s3_test_path, 'test_s3uri_rmdir')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
+
+    # test rmdir(dry_run=True)
+    S3URI(prefix).rmdir(dry_run=True)
+    for file in all_files:
+        assert S3URI(file).exists
+
+    # test rmdir(dry_run=False)
+    S3URI(prefix).rmdir(dry_run=False)
+    for file in all_files:
+        assert not S3URI(file).exists
 
 
 # original methods in S3URI

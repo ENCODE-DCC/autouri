@@ -148,6 +148,22 @@ class S3URI(URIBase):
             return obj['Body'].read()
         return obj['Body'].read().decode()
 
+    def find_all_files(self):
+        cl = S3URI.get_boto3_client(self._thread_id)
+        bucket, path = self.get_bucket_path()
+        sep = S3URI.get_path_sep()
+        if path:
+            path = path.rstrip(sep) + sep
+
+        result = []
+        objs = cl.list_objects_v2(Bucket=bucket, Prefix=path).get('Contents')
+        if objs:
+            for obj in objs:
+                scheme = S3URI.get_schemes()[0]
+                uri = scheme + sep.join([bucket, obj['Key']])
+                result.append(uri)
+        return result
+
     def _write(self, s):
         cl = S3URI.get_boto3_client(self._thread_id)
         bucket, path = self.get_bucket_path()
@@ -232,7 +248,12 @@ class S3URI(URIBase):
     def get_bucket_path(self) -> Tuple[str, str]:
         """Returns a tuple of URI's S3 bucket and path.
         """
-        bucket, path = self.uri_wo_scheme.split(S3URI.get_path_sep(), 1)
+        arr = self.uri_wo_scheme.split(S3URI.get_path_sep(), maxsplit=1)
+        if len(arr) == 1:
+            # root directory without path (key)
+            bucket, path = arr[0], ''
+        else:
+            bucket, path = arr
         return bucket, path
 
     def get_presigned_url(self, duration=None, use_cached=False) -> str:

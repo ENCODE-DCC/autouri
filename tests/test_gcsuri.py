@@ -12,7 +12,8 @@ from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 from .files import (
     v6_txt_contents,
     common_paths,
-    recurse_raise_if_uri_not_exist
+    recurse_raise_if_uri_not_exist,
+    make_files_in_dir,
 )
 
 
@@ -274,6 +275,39 @@ def test_gcsuri_read(gcs_v6_txt):
     u = GCSURI(gcs_v6_txt)
     assert u.read() == v6_txt_contents()
     assert u.read(byte=True) == v6_txt_contents().encode()
+
+
+def test_gcsuri_find_all_files(gcs_test_path):
+    """Make a directory structure with empty files.
+
+    Check if find_all_files() returns correct file (not sub-directory) paths.
+    """
+    prefix = os.path.join(gcs_test_path, 'test_gcsuri_find_all_files')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
+
+    all_files_found = GCSURI(prefix).find_all_files()
+    assert sorted(all_files_found) == sorted(all_files)
+    for file in all_files:
+        assert GCSURI(file).exists
+
+
+def test_gcsuri_rmdir(gcs_test_path):
+    """Make a directory structure with empty files.
+
+    Check if rmdir() deletes all empty files on given $prefix.
+    """
+    prefix = os.path.join(gcs_test_path, 'test_gcsuri_rmdir')
+    all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
+
+    # test rmdir(dry_run=True)
+    GCSURI(prefix).rmdir(dry_run=True)
+    for file in all_files:
+        assert GCSURI(file).exists
+
+    # test rmdir(dry_run=False)
+    GCSURI(prefix).rmdir(dry_run=False)
+    for file in all_files:
+        assert not GCSURI(file).exists
 
 
 # original methods in GCSURI

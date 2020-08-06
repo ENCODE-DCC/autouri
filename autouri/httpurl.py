@@ -112,6 +112,9 @@ class HTTPURL(URIBase):
         else:
             return b.decode()
 
+    def find_all_files(self):
+        raise NotImplementedError('find_all_files() is not available for URLs.')
+
     def _write(self, s):
         raise ReadOnlyStorageError('Cannot write on a read-only storage. {f}'.format(
             f=self._uri))

@@ -1,14 +1,23 @@
 import logging
+import multiprocessing
 import os
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from filelock import BaseFileLock
-from typing import Any, Callable, Dict, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from .loc_aux import recurse_json, recurse_tsv, recurse_csv
 from .metadata import URIMetadata
 
 
 logger = logging.getLogger(__name__)
+
+
+def autouri_rm(uri, thread_id):
+    """Wrapper for AutoURI(uri).rm().
+    This function is used for multiprocessing.map() which requires a picklable function
+    outside the scope of the class.
+    """
+    AutoURI(uri, thread_id=thread_id).rm()
 
 
 class AutoURIRecursionError(RuntimeError):
@@ -17,7 +26,10 @@ class AutoURIRecursionError(RuntimeError):
 
 class URIBase(ABC):
     """A base actract class for all URI classes.
-    This class is for file only (no support for directory).
+    This class is for file only except for the following two methods.
+        - list(): Recursively list all files (full path URIs) on a directory.
+        - rmdir(): Recursively remove all files on a directory.
+
     This class can localize (recursively) URI on different URI class.
     (loc. stands for localization.)
     A default localization strategy keeps the directory structure and basename of an original URI.
@@ -66,6 +78,8 @@ class URIBase(ABC):
 
     LOC_PREFIX: str = ''
     LOC_RECURSION_DEPTH_LIMIT: int = 10
+
+    DEFAULT_NUM_THREADS = 6
 
     _PATH_SEP: str = '/'
     _SCHEMES: Tuple[str, ...] = tuple()
@@ -319,7 +333,30 @@ class URIBase(ABC):
         """
         with self.get_lock(no_lock=no_lock) as lock:
             self._rm()
+            logger.info('rm: {uri}'.format(uri=self._uri))
         return
+
+    def rmdir(self, dry_run=False, num_threads=DEFAULT_NUM_THREADS, no_lock=False):
+        """Recursively delete all files on a directory.
+        Use it at your own risk. This method is multi-threaded.
+
+        Args:
+            dry_run:
+                Dry-run.
+            num_threads:
+                Number of threads for deletion.
+        """
+        files = self.find_all_files()
+        if dry_run:
+            for uri in files:
+                logger.info('rm (dry-run): {uri}'.format(uri=uri))
+            return
+        num_files = len(files)
+        thread_ids = [i % num_threads for i in range(num_files)]
+
+        args = list(zip(files, thread_ids))
+        with multiprocessing.Pool(num_threads) as p:
+            p.starmap(autouri_rm, args)
 
     def get_lock(self, no_lock=False, timeout=None, poll_interval=None) -> BaseFileLock:
         """
@@ -367,6 +404,13 @@ class URIBase(ABC):
     @abstractmethod
     def read(self, byte=False) -> Union[str, bytes]:
         """Reads string/byte from a URI.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def find_all_files(self, recursive=False) -> List[str]:
+        """Recursively list all files (with full path/URI) on a directory.
+        This method is available for a directory only and does not list sub-directories.
         """
         raise NotImplementedError
 
@@ -596,6 +640,12 @@ class AutoURI(URIBase):
         self.__raise_value_error()
 
     def read(self, byte=False):
+        self.__raise_value_error()
+
+    def find_all_files(self):
+        self.__raise_value_error()
+
+    def rmdir(self):
         self.__raise_value_error()
 
     def _write(self, s):

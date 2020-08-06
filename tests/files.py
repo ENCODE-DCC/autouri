@@ -17,6 +17,7 @@ See j1_json_contents() for its detailed structure.
         v5_csv
             v6_txt
 """
+import os
 from autouri.autouri import AutoURI
 from autouri.loc_aux import recurse_json, recurse_tsv, recurse_csv
 
@@ -197,3 +198,57 @@ def recurse_raise_if_uri_not_exist(uri):
         else:
             raise Exception('URI is a valid path but does not exist.')
     return None, False
+
+
+def make_files_in_dir(prefix, make_local_empty_dir_d_a=False):
+    """Make a compllicated directory structure with empty files.
+
+    Directory structure and empty files in it:
+        $prefix (as root)
+            a
+            b/
+                a
+                b
+            c/
+                a/
+                    a
+                    b
+                b/
+                    a/
+                        a
+                c
+            d/ (optional if make_local_empty_dir_d_a)
+                a/ (optional if make_local_empty_dir_d_a)
+    Args:
+        make_local_empty_dir_d_a:
+            Make a local empty dir ($prefix/d/a/).
+            This flag should not be used for cloud buckets since
+            they don't support sub-directories.
+    Returns:
+        List of file URIs.
+    """
+    file_a = os.path.join(prefix, 'a')
+    file_b_a = os.path.join(prefix, 'b/a')
+    file_b_b = os.path.join(prefix, 'b/b')
+    file_c_a_a = os.path.join(prefix, 'c/a/a')
+    file_c_a_b = os.path.join(prefix, 'c/a/b')
+    file_c_b_a_a = os.path.join(prefix, 'c/b/a/a')
+    file_c_c = os.path.join(prefix, 'c/c')
+
+    all_files = [
+        file_a,
+        file_b_a,
+        file_b_b,
+        file_c_a_a,
+        file_c_a_b,
+        file_c_b_a_a,
+        file_c_c,
+    ]
+
+    for uri in all_files:
+        AutoURI(uri).write('')
+    if make_local_empty_dir_d_a:
+        path = os.path.join(prefix, 'd/a')
+        os.makedirs(path, exist_ok=True)
+
+    return all_files

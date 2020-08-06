@@ -14,6 +14,9 @@ from . import __version__ as version
 logger = logging.getLogger(__name__)
 
 
+DEFAULT_RMDIR_NTH = 6
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -61,6 +64,11 @@ def parse_args():
              'Target directory must have a trailing directory separator '
              '(e.g. /)',
         parents=[parent_src, parent_target, parent_cp, parent_all])
+    p_ls = subparser.add_parser(
+        'find',
+        help='AutoURI(src).find_all_files(): Recursively list all files (not sub-directories) '
+        'on source (directory).',
+        parents=[parent_src, parent_all])
 
     p_read = subparser.add_parser(
         'read',
@@ -78,6 +86,22 @@ def parse_args():
         'rm',
         help='AutoURI(src).rm(): Delete source.',
         parents=[parent_src, parent_all])
+
+    p_rmdir = subparser.add_parser(
+        'rmdir',
+        help='AutoURI(src).rmdir(): Recursively delete all files on '
+        'source directory.',
+        parents=[parent_src, parent_all])
+    p_rmdir.add_argument(
+        '--delete',
+        action='store_true',
+        help='DELETE outputs.')
+    p_rmdir.add_argument(
+        '-t', '--num-threads',
+        default=URIBase.DEFAULT_NUM_THREADS,
+        type=int,
+        help='Number of threads used for deleting '
+        'multiple files on cloud buckets (gs://, s3://).')
 
     p_loc = subparser.add_parser(
         'loc',
@@ -161,21 +185,32 @@ def main():
                 raise NotImplementedError
             logger.info('Copying from file {s} to {t} {reason}'.format(
                 s=src, t=target, reason=reason))
-
     elif args.action == 'read':
         s = AutoURI(src).read()
         print(s)
+
+    elif args.action == 'find':
+        for uri in AutoURI(src).find_all_files():
+            print(uri)
 
     elif args.action == 'write':
         AutoURI(src).write(args.text)
         logger.info('Text has been written to {s}'.format(s=src))
 
-    elif args.action == 'rm':        
+    elif args.action == 'rm':
         u = AutoURI(src)
         if not u.exists:
             raise ValueError('File does not exist. {s}'.format(s=src))
         u.rm()
         logger.info('Deleted {s}'.format(s=src))
+
+    elif args.action == 'rmdir':
+        AutoURI(src).rmdir(dry_run=not args.delete, num_threads=args.num_threads)
+        if not args.delete:
+            logger.warning(
+                'rmdir ran in a dry-run mode. '
+                'Use --delete to DELETE ALL FILES on a directory.'
+            )
 
     elif args.action == 'loc':
         _, localized = AutoURI(src).localize_on(
