@@ -1,8 +1,9 @@
+---
 version: 2
 
 
-defaults: &defaults
-  machine: 
+defaults:
+  machine:
     image: circleci/classic:latest
   working_directory: ~/autouri
 
@@ -24,6 +25,19 @@ install_python3: &install_python3
     sudo ln -s /usr/bin/python3.6 /usr/local/bin/python3
 
 
+install_shellcheck: &install_shellcheck
+  name: Install shellcheck (not using apt-get)
+  command: |
+    curl -Ls https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz | tar xJ && sudo mv shellcheck-stable/shellcheck /usr/local/bin/
+
+
+install_precommit: &install_precommit
+  name: Install Python pre-commit
+  command: |
+    sudo pip3 install PyYAML --ignore-installed
+    sudo pip3 install pre-commit
+
+
 install_py3_packages: &install_py3_packages
   name: Install Python packages
   command: |
@@ -33,12 +47,12 @@ install_py3_packages: &install_py3_packages
 
 install_gcs_lib: &install_gcs_lib
   name: Install Google Cloud SDK (gcloud and gsutil) and Python API (google-cloud-storage)
-  command: |    
+  command: |
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
     sudo apt-get update && sudo apt-get install google-cloud-sdk -y
     sudo pip3 install google-cloud-storage
-    
+
 
 install_aws_lib: &install_aws_lib
   name: Install AWS Python API (boto3) and CLI (awscli)
@@ -54,6 +68,16 @@ make_root_only_dir: &make_root_only_dir
 
 
 jobs:
+  lint:
+    <<: *machine_defaults
+    steps:
+      - checkout
+      - run: *install_python3
+      - run: *install_precommit
+      - run: *install_shellcheck
+      - run:
+          no_output_timeout: 10m
+          command: pre-commit run --all
   pytest:
     <<: *machine_defaults
     steps:
@@ -91,11 +115,11 @@ jobs:
             gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID}
             gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID}
 
- 
+
 # Define workflow here
 workflows:
   version: 2
   build_workflow:
     jobs:
+      - lint
       - pytest
-

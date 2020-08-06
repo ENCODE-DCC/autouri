@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Notes about race condition:
 We use soft locks, which watches .lock file to check if appears and disappears.
 
@@ -29,12 +28,8 @@ Important notes:
         We don't allow versioning so keep using unstable soft file lock.
 """
 import os
-import pytest
-import time
 from multiprocessing import Pool
-from typing import Any, Tuple, Union
 
-from autouri.abspath import AbsPath
 from autouri.autouri import AutoURI
 
 from .files import v6_txt_contents
@@ -48,35 +43,35 @@ def write_v6_txt(x):
     s = v6_txt_contents() + str(i)
     u = AutoURI(uri, thread_id=i)
 
-    with u.get_lock(no_lock=False) as lock:
+    with u.get_lock(no_lock=False):
         u.write(s, no_lock=True)
         assert u.read() == s
 
 
 def run_write_v6_txt(prefix, nth):
-    s = os.path.join(prefix, 'v6.txt')
+    s = os.path.join(prefix, "v6.txt")
     u = AutoURI(s)
     if u.exists:
         u.rm()
     p = Pool(nth)
-    p.map(write_v6_txt, list(zip([s]*nth, range(nth))))
+    p.map(write_v6_txt, list(zip([s] * nth, range(nth))))
     p.close()
     p.join()
 
 
 def test_race_cond_autouri_write_local(local_test_path):
-    prefix = os.path.join(local_test_path, 'test_race_cond_autouri_write_local')
+    prefix = os.path.join(local_test_path, "test_race_cond_autouri_write_local")
     nth = 50
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_gcs(gcs_test_path):
-    prefix = os.path.join(gcs_test_path, 'test_race_cond_autouri_write_gcs')
+    prefix = os.path.join(gcs_test_path, "test_race_cond_autouri_write_gcs")
     nth = 10
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_s3(s3_test_path):
     nth = 5
-    prefix = os.path.join(s3_test_path, 'test_race_cond_autouri_write_s3')
+    prefix = os.path.join(s3_test_path, "test_race_cond_autouri_write_s3")
     run_write_v6_txt(prefix, nth)
