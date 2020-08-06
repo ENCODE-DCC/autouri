@@ -12,71 +12,71 @@ from autouri.httpurl import HTTPURL, ReadOnlyStorageError
 from .files import common_paths, v6_txt_contents
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_uri(path) -> Any:
     assert HTTPURL(path).uri == path
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_uri_wo_ext(path) -> str:
-    assert HTTPURL(path).uri_wo_ext == os.path.splitext(path.split('?', 1)[0])[0]
+    assert HTTPURL(path).uri_wo_ext == os.path.splitext(path.split("?", 1)[0])[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_uri_wo_scheme(path) -> str:
-    assert HTTPURL(path).uri_wo_scheme == path.replace('https://', '', 1).replace(
-        'http://', '', 1
+    assert HTTPURL(path).uri_wo_scheme == path.replace("https://", "", 1).replace(
+        "http://", "", 1
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_is_valid(path) -> bool:
     """Also tests AutoURI auto-conversion since it's based on is_valid property
     """
-    expected = path.startswith(('https://', 'http://'))
+    expected = path.startswith(("https://", "http://"))
     assert HTTPURL(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == HTTPURL
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_dirname(path) -> str:
     assert HTTPURL(path).dirname == os.path.dirname(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_dirname_wo_scheme(path) -> str:
     assert HTTPURL(path).dirname_wo_scheme == os.path.dirname(path).replace(
-        'https://', '', 1
-    ).replace('http://', '', 1)
+        "https://", "", 1
+    ).replace("http://", "", 1)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_loc_dirname(path) -> str:
-    assert HTTPURL(path).loc_dirname == hashlib.md5(path.encode('utf-8')).hexdigest()
+    assert HTTPURL(path).loc_dirname == hashlib.md5(path.encode("utf-8")).hexdigest()
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_basename(path) -> str:
-    assert HTTPURL(path).basename == os.path.basename(path).split('?', 1)[0]
+    assert HTTPURL(path).basename == os.path.basename(path).split("?", 1)[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_basename_wo_ext(path) -> str:
     assert (
         HTTPURL(path).basename_wo_ext
-        == os.path.splitext(os.path.basename(path).split('?', 1)[0])[0]
+        == os.path.splitext(os.path.basename(path).split("?", 1)[0])[0]
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_httpurl_ext(path) -> str:
-    assert HTTPURL(path).ext == os.path.splitext(path.split('?', 1)[0])[1]
+    assert HTTPURL(path).ext == os.path.splitext(path.split("?", 1)[0])[1]
 
 
 def test_httpurl_exists(url_v6_txt):
     assert HTTPURL(url_v6_txt).exists
-    assert not HTTPURL(url_v6_txt + '.should-not-be-here').exists
-    assert not HTTPURL('http://hey.this.should/not/be/here.txt').exists
+    assert not HTTPURL(url_v6_txt + ".should-not-be-here").exists
+    assert not HTTPURL("http://hey.this.should/not/be/here.txt").exists
 
 
 def test_httpurl_mtime(gcs_v6_txt, url_v6_txt):
@@ -90,13 +90,13 @@ def test_httpurl_mtime(gcs_v6_txt, url_v6_txt):
     """
     return
 
-    u = GCSURI(gcs_v6_txt + '.tmp')
+    u = GCSURI(gcs_v6_txt + ".tmp")
     if u.exists:
         # if we don't delete it, "last-modified" will be inaccurate (pointing ot creation time).
         # see the above comments in this function's docstring.
         u.rm()
-    u.write('temp file for testing')
-    u_url = HTTPURL(url_v6_txt + '.tmp')
+    u.write("temp file for testing")
+    u_url = HTTPURL(url_v6_txt + ".tmp")
     now = time.time()
     assert now - 10 < u_url.mtime < now + 10
     u.rm()
@@ -135,7 +135,7 @@ def test_httpurl_md5_file_uri(url_v6_txt):
     )
 
 
-def test_httpurl_cp_url(url_v6_txt, url_test_path) -> 'AutoURI':
+def test_httpurl_cp_url(url_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: url -> url
             This will fail as intended since URL is read-only.
@@ -144,7 +144,7 @@ def test_httpurl_cp_url(url_v6_txt, url_test_path) -> 'AutoURI':
     basename = os.path.basename(url_v6_txt)
 
     for test_path in (url_test_path,):
-        u_dest = AutoURI(os.path.join(test_path, 'test_httpurl_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_httpurl_cp", basename))
 
         with pytest.raises(ReadOnlyStorageError):
             _, ret = u.cp(u_dest, return_flag=True)
@@ -152,7 +152,7 @@ def test_httpurl_cp_url(url_v6_txt, url_test_path) -> 'AutoURI':
 
 def test_httpurl_cp(
     url_v6_txt, local_test_path, s3_test_path, gcs_test_path
-) -> 'AutoURI':
+) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: url -> local
         s3_test_path: url -> s3
@@ -172,7 +172,7 @@ def test_httpurl_cp(
     basename = os.path.basename(url_v6_txt)
 
     for test_path in (local_test_path, s3_test_path, gcs_test_path):
-        u_dest = AutoURI(os.path.join(test_path, 'test_httpurl_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_httpurl_cp", basename))
         if u_dest.exists:
             u_dest.rm()
 
@@ -223,13 +223,13 @@ def test_httpurl_cp(
 
 
 def test_httpurl_write(url_test_path):
-    u = HTTPURL(url_test_path + '/test_httpurl_write.tmp')
+    u = HTTPURL(url_test_path + "/test_httpurl_write.tmp")
     with pytest.raises(ReadOnlyStorageError):
-        u.write('test')
+        u.write("test")
 
 
 def test_httpurl_rm(url_test_path):
-    u = HTTPURL(url_test_path + '/test_httpurl_rm.tmp')
+    u = HTTPURL(url_test_path + "/test_httpurl_rm.tmp")
     with pytest.raises(ReadOnlyStorageError):
         u.rm()
 
@@ -245,7 +245,7 @@ def test_httpurl_get_metadata(url_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m2.md5 is None
     assert m2.size == v6_txt_size
 
-    u_md5 = HTTPURL(url_v6_txt + '.md5')
+    u_md5 = HTTPURL(url_v6_txt + ".md5")
     if u_md5.exists:
         u_md5.rm()
     m3 = u.get_metadata(make_md5_file=True)
@@ -262,14 +262,14 @@ def test_httpurl_read(url_v6_txt):
 
 
 def test_httpurl_find_all_files(url_test_path):
-    prefix = os.path.join(url_test_path, 'test_httpurl_find_all_files')
+    prefix = os.path.join(url_test_path, "test_httpurl_find_all_files")
 
     with pytest.raises(NotImplementedError):
         HTTPURL(prefix).find_all_files()
 
 
 def test_httpurl_rmdir(url_test_path):
-    prefix = os.path.join(url_test_path, 'test_httpurl_rmdir')
+    prefix = os.path.join(url_test_path, "test_httpurl_rmdir")
 
     with pytest.raises(NotImplementedError):
         HTTPURL(prefix).rmdir()
@@ -284,17 +284,17 @@ def test_httpurl_get_path_sep() -> str:
 
 
 def test_httpurl_get_schemes() -> Tuple[str, ...]:
-    assert HTTPURL.get_schemes() == ('http://', 'https://')
+    assert HTTPURL.get_schemes() == ("http://", "https://")
 
 
 def test_httpurl_get_loc_suffix() -> str:
-    assert HTTPURL.get_loc_suffix() == '.url'
+    assert HTTPURL.get_loc_suffix() == ".url"
 
 
 def test_httpurl_get_loc_prefix() -> str:
     """HTTPURL is read-only storage and hence loc_prefix == ''
     """
-    assert HTTPURL.get_loc_prefix() == ''
+    assert HTTPURL.get_loc_prefix() == ""
 
 
 def test_httpurl_localize(
@@ -302,7 +302,7 @@ def test_httpurl_localize(
 ) -> Tuple[str, bool]:
     """Localize should fail.
     """
-    loc_prefix = os.path.join(url_test_path, 'test_httpurl_localize')
+    loc_prefix = os.path.join(url_test_path, "test_httpurl_localize")
 
     for j1_json in (gcs_j1_json,):
         # localization from local storage

@@ -17,73 +17,73 @@ from .files import (
 )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_uri(path) -> Any:
     assert S3URI(path).uri == path
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_uri_wo_ext(path) -> str:
     assert S3URI(path).uri_wo_ext == os.path.splitext(path)[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_uri_wo_scheme(path) -> str:
-    assert S3URI(path).uri_wo_scheme == path.replace('s3://', '', 1)
+    assert S3URI(path).uri_wo_scheme == path.replace("s3://", "", 1)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_is_valid(path) -> bool:
     """Also tests AutoURI auto-conversion since it's based on is_valid property
     """
-    expected = path.startswith('s3://')
+    expected = path.startswith("s3://")
     assert S3URI(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == S3URI
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_dirname(path) -> str:
     assert S3URI(path).dirname == os.path.dirname(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_dirname_wo_scheme(path) -> str:
     assert S3URI(path).dirname_wo_scheme == os.path.dirname(path).replace(
-        's3://', '', 1
+        "s3://", "", 1
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_loc_dirname(path) -> str:
     assert S3URI(path).loc_dirname == os.path.dirname(path).replace(
-        's3://', '', 1
-    ).lstrip('/')
+        "s3://", "", 1
+    ).lstrip("/")
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_basename(path) -> str:
     assert S3URI(path).basename == os.path.basename(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_basename_wo_ext(path) -> str:
     assert S3URI(path).basename_wo_ext == os.path.splitext(os.path.basename(path))[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_s3uri_ext(path) -> str:
     assert S3URI(path).ext == os.path.splitext(path)[1]
 
 
 def test_s3uri_exists(s3_v6_txt):
     assert S3URI(s3_v6_txt).exists
-    assert not S3URI(s3_v6_txt + '.should-not-be-here').exists
-    assert not S3URI('s3://hey/this/should/not/be/here.txt').exists
+    assert not S3URI(s3_v6_txt + ".should-not-be-here").exists
+    assert not S3URI("s3://hey/this/should/not/be/here.txt").exists
 
 
 def test_s3uri_mtime(s3_v6_txt):
-    u = S3URI(s3_v6_txt + '.tmp')
-    u.write('temp file for testing')
+    u = S3URI(s3_v6_txt + ".tmp")
+    u.write("temp file for testing")
     now = time.time()
     assert now - 10 < u.mtime < now + 10
     u.rm()
@@ -124,7 +124,7 @@ def test_s3uri_md5_file_uri(s3_v6_txt):
     )
 
 
-def test_s3uri_cp_url(s3_v6_txt, url_test_path) -> 'AutoURI':
+def test_s3uri_cp_url(s3_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: s3 -> url
             This will fail as intended since URL is read-only.
@@ -133,13 +133,13 @@ def test_s3uri_cp_url(s3_v6_txt, url_test_path) -> 'AutoURI':
     basename = os.path.basename(s3_v6_txt)
 
     for test_path in (url_test_path,):
-        u_dest = AutoURI(os.path.join(test_path, 'test_s3uri_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_s3uri_cp", basename))
 
         with pytest.raises(ReadOnlyStorageError):
             _, ret = u.cp(u_dest, return_flag=True)
 
 
-def test_s3uri_cp(s3_v6_txt, local_test_path, s3_test_path, gcs_test_path) -> 'AutoURI':
+def test_s3uri_cp(s3_v6_txt, local_test_path, s3_test_path, gcs_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: s3 -> local
         s3_test_path: s3 -> s3
@@ -159,7 +159,7 @@ def test_s3uri_cp(s3_v6_txt, local_test_path, s3_test_path, gcs_test_path) -> 'A
     basename = os.path.basename(s3_v6_txt)
 
     for test_path in (local_test_path, s3_test_path, gcs_test_path):
-        u_dest = AutoURI(os.path.join(test_path, 'test_s3uri_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_s3uri_cp", basename))
         if u_dest.exists:
             u_dest.rm()
 
@@ -210,33 +210,33 @@ def test_s3uri_cp(s3_v6_txt, local_test_path, s3_test_path, gcs_test_path) -> 'A
 
 
 def test_s3uri_write(s3_test_path):
-    u = S3URI(s3_test_path + '/test_s3uri_write.tmp')
+    u = S3URI(s3_test_path + "/test_s3uri_write.tmp")
 
     assert not u.exists
-    u.write('test')
-    assert u.exists and u.read() == 'test'
+    u.write("test")
+    assert u.exists and u.read() == "test"
     u.rm()
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('test2', no_lock=True)
-    assert u.exists and u.read() == 'test2'
+    u.write("test2", no_lock=True)
+    assert u.exists and u.read() == "test2"
     u.rm()
     assert not u.exists
 
 
 def test_s3uri_rm(s3_test_path):
-    u = S3URI(s3_test_path + '/test_s3uri_rm.tmp')
+    u = S3URI(s3_test_path + "/test_s3uri_rm.tmp")
 
     assert not u.exists
-    u.write('')
+    u.write("")
     assert u.exists
     u.rm()
     assert not u.exists
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('', no_lock=True)
+    u.write("", no_lock=True)
     assert u.exists
     u.rm()
     assert not u.exists
@@ -253,7 +253,7 @@ def test_s3uri_get_metadata(s3_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m2.md5 is None
     assert m2.size == v6_txt_size
 
-    u_md5 = S3URI(s3_v6_txt + '.md5')
+    u_md5 = S3URI(s3_v6_txt + ".md5")
     if u_md5.exists:
         u_md5.rm()
     m3 = u.get_metadata(make_md5_file=True)
@@ -274,7 +274,7 @@ def test_s3uri_find_all_files(s3_test_path):
 
     Check if find_all_files() returns correct file (not sub-directory) paths.
     """
-    prefix = os.path.join(s3_test_path, 'test_s3uri_find_all_files')
+    prefix = os.path.join(s3_test_path, "test_s3uri_find_all_files")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
     all_files_found = S3URI(prefix).find_all_files()
@@ -288,7 +288,7 @@ def test_s3uri_rmdir(s3_test_path):
 
     Check if rmdir() deletes all empty files on given $prefix.
     """
-    prefix = os.path.join(s3_test_path, 'test_s3uri_rmdir')
+    prefix = os.path.join(s3_test_path, "test_s3uri_rmdir")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
     # test rmdir(dry_run=True)
@@ -304,14 +304,14 @@ def test_s3uri_rmdir(s3_test_path):
 
 # original methods in S3URI
 def test_s3uri_get_bucket_path():
-    assert S3URI('s3://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
-    assert S3URI('s3://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == (
-        'asdflskfjljkfc-asdf',
-        'ddfjlfd/d.log',
+    assert S3URI("s3://a/b/c/d/e.txt").get_bucket_path() == ("a", "b/c/d/e.txt")
+    assert S3URI("s3://asdflskfjljkfc-asdf/ddfjlfd/d.log").get_bucket_path() == (
+        "asdflskfjljkfc-asdf",
+        "ddfjlfd/d.log",
     )
-    assert S3URI('s3://ok-test-bucket/hello.txt').get_bucket_path() == (
-        'ok-test-bucket',
-        'hello.txt',
+    assert S3URI("s3://ok-test-bucket/hello.txt").get_bucket_path() == (
+        "ok-test-bucket",
+        "hello.txt",
     )
 
 
@@ -342,19 +342,19 @@ def test_s3uri_get_path_sep() -> str:
 
 
 def test_s3uri_get_schemes() -> Tuple[str, ...]:
-    assert S3URI.get_schemes() == ('s3://',)
+    assert S3URI.get_schemes() == ("s3://",)
 
 
 def test_s3uri_get_loc_suffix() -> str:
-    assert S3URI.get_loc_suffix() == '.s3'
+    assert S3URI.get_loc_suffix() == ".s3"
 
 
 def test_s3uri_get_loc_prefix() -> str:
-    test_loc_prefix = 'test_s3uri_get_loc_prefix'
+    test_loc_prefix = "test_s3uri_get_loc_prefix"
     S3URI.init_s3uri(loc_prefix=test_loc_prefix)
     assert S3URI.get_loc_prefix() == test_loc_prefix
-    S3URI.init_s3uri(loc_prefix='')
-    assert S3URI.get_loc_prefix() == ''
+    S3URI.init_s3uri(loc_prefix="")
+    assert S3URI.get_loc_prefix() == ""
 
 
 def test_s3uri_localize(
@@ -423,7 +423,7 @@ def test_s3uri_localize(
         recursive:
             j1.json
     """
-    loc_prefix = os.path.join(s3_test_path, 'test_s3uri_localize')
+    loc_prefix = os.path.join(s3_test_path, "test_s3uri_localize")
 
     for j1_json in (s3_j1_json,):
         # localization from same storage

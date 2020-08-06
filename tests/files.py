@@ -23,7 +23,7 @@ from autouri.loc_aux import recurse_csv, recurse_json, recurse_tsv
 
 
 def j1_json_contents(
-    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix=''
+    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix=""
 ):
     if prefix_v41 is None:
         prefix_v41 = prefix
@@ -31,7 +31,7 @@ def j1_json_contents(
         prefix_v421 = prefix
     if prefix_v5 is None:
         prefix_v5 = prefix
-    return '''{{
+    return """{{
         "k1": "v1",
         "k2": 1,
         "k3": 2.2,
@@ -44,7 +44,7 @@ def j1_json_contents(
         }},
         "k5": "{prefix_v5}/even/deeper/v5{loc_suffix}.csv"
     }}
-    '''.format(
+    """.format(
         prefix_v41=prefix_v41,
         prefix_v421=prefix_v421,
         prefix_v5=prefix_v5,
@@ -63,7 +63,7 @@ def v421_tsv_contents(
     prefix_v5=None,
     prefix_v1=None,
     prefix_v6=None,
-    loc_suffix='',
+    loc_suffix="",
     make_link_to_j1_json=False,
 ):
     """
@@ -80,16 +80,16 @@ def v421_tsv_contents(
     if prefix_v6 is None:
         prefix_v6 = prefix
     arr = [
-        'k1\tv1',
-        'k2\t1',
-        'k3\t2.2',
-        'k4\tnot/absolute/path',
-        'k5\t{prefix_v5}/even/deeper/v5{loc_suffix}.csv',
-        'k6\t{prefix_v6}/v6.txt',
+        "k1\tv1",
+        "k2\t1",
+        "k3\t2.2",
+        "k4\tnot/absolute/path",
+        "k5\t{prefix_v5}/even/deeper/v5{loc_suffix}.csv",
+        "k6\t{prefix_v6}/v6.txt",
     ]
     if make_link_to_j1_json:
-        arr.append('k7\t{prefix_v1}/j1.json')
-    s = '\n'.join(arr)
+        arr.append("k7\t{prefix_v1}/j1.json")
+    s = "\n".join(arr)
     return s.format(
         prefix_v5=prefix_v5,
         prefix_v1=prefix_v1,
@@ -101,27 +101,27 @@ def v421_tsv_contents(
 def v5_csv_contents(prefix, prefix_v6=None):
     if prefix_v6 is None:
         prefix_v6 = prefix
-    s = '\n'.join(
+    s = "\n".join(
         [
-            'k1,v1',
-            'k2,1',
-            'k3,2.2',
-            'k4,not/absolute/path',
-            'k5,s33://not-valid-bucket-address',
-            'k6,{prefix_v6}/v6.txt',
+            "k1,v1",
+            "k2,1",
+            "k3,2.2",
+            "k4,not/absolute/path",
+            "k5,s33://not-valid-bucket-address",
+            "k6,{prefix_v6}/v6.txt",
         ]
     )
     return s.format(prefix_v6=prefix_v6)
 
 
 def v6_txt_contents():
-    return 'v6: Hello World'
+    return "v6: Hello World"
 
 
 def j1_json(
-    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix='', make=False
+    prefix, prefix_v41=None, prefix_v421=None, prefix_v5=None, loc_suffix="", make=False
 ):
-    u = '{prefix}/j1{loc_suffix}.json'.format(prefix=prefix, loc_suffix=loc_suffix)
+    u = "{prefix}/j1{loc_suffix}.json".format(prefix=prefix, loc_suffix=loc_suffix)
     if make:
         AutoURI(u).write(
             j1_json_contents(
@@ -136,7 +136,7 @@ def j1_json(
 
 
 def v41_json(prefix, make=False):
-    u = '{prefix}/v41.json'.format(prefix=prefix)
+    u = "{prefix}/v41.json".format(prefix=prefix)
     if make:
         AutoURI(u).write(v41_json_contents())
     return u
@@ -147,11 +147,11 @@ def v421_tsv(
     prefix_v5=None,
     prefix_v1=None,
     prefix_v6=None,
-    loc_suffix='',
+    loc_suffix="",
     make=False,
     make_link_to_j1_json=False,
 ):
-    u = '{prefix}/deeper/v421{loc_suffix}.tsv'.format(
+    u = "{prefix}/deeper/v421{loc_suffix}.tsv".format(
         prefix=prefix, loc_suffix=loc_suffix
     )
     if make:
@@ -169,14 +169,14 @@ def v421_tsv(
 
 
 def v5_csv(prefix, prefix_v6=None, make=False):
-    u = '{prefix}/even/deeper/v5.csv'.format(prefix=prefix)
+    u = "{prefix}/even/deeper/v5.csv".format(prefix=prefix)
     if make:
         AutoURI(u).write(v5_csv_contents(prefix=prefix, prefix_v6=prefix_v6))
     return u
 
 
 def v6_txt(prefix, make=False):
-    u = '{prefix}/v6.txt'.format(prefix=prefix)
+    u = "{prefix}/v6.txt".format(prefix=prefix)
     if make:
         AutoURI(u).write(v6_txt_contents())
     return u
@@ -184,28 +184,28 @@ def v6_txt(prefix, make=False):
 
 def common_paths():
     return [
-        '/testing/abspath',
-        '/testing/abspath/',
-        '~/os/expandable',
-        '~~/os/expandable',
-        '~/~/os/expandable',
-        'test/ok/man.csv',
-        'http://hello.world.com/ok.txt',
-        'https://hello.world.com/ok.txt',
-        'http://hello.world.com/ok.txt?parameter1=true&parameter2=false',
-        'https://hello.world.com/ok.txt?parameter1=true&parameter2=false',
-        'http:/hello.world.com/notok.txt',
-        'ftp:/hello.world.com/notok.txt',
-        'dx://dnanexus-prj/not/supported.txt',
-        'file:/notok.txt',
-        'file://hostname/notok.txt',
-        's3://hello-world/ok.txt',
-        's3:/hello-world/not-ok.txt',
-        's3:\\hello-world\\not-ok.txt',
-        'gs://hello-world/ok.txt',
-        'gs:/hello-world/not-ok.txt',
-        'gs:\\hello-world\\not-ok.txt',
-        '!@#:;$@!#$F',
+        "/testing/abspath",
+        "/testing/abspath/",
+        "~/os/expandable",
+        "~~/os/expandable",
+        "~/~/os/expandable",
+        "test/ok/man.csv",
+        "http://hello.world.com/ok.txt",
+        "https://hello.world.com/ok.txt",
+        "http://hello.world.com/ok.txt?parameter1=true&parameter2=false",
+        "https://hello.world.com/ok.txt?parameter1=true&parameter2=false",
+        "http:/hello.world.com/notok.txt",
+        "ftp:/hello.world.com/notok.txt",
+        "dx://dnanexus-prj/not/supported.txt",
+        "file:/notok.txt",
+        "file://hostname/notok.txt",
+        "s3://hello-world/ok.txt",
+        "s3:/hello-world/not-ok.txt",
+        "s3:\\hello-world\\not-ok.txt",
+        "gs://hello-world/ok.txt",
+        "gs:/hello-world/not-ok.txt",
+        "gs:\\hello-world\\not-ok.txt",
+        "!@#:;$@!#$F",
     ]
 
 
@@ -213,14 +213,14 @@ def recurse_raise_if_uri_not_exist(uri):
     uri = AutoURI(uri)
     if uri.is_valid:
         if uri.exists:
-            if uri.ext == '.json':
+            if uri.ext == ".json":
                 recurse_json(uri.read(), recurse_raise_if_uri_not_exist)
-            elif uri.ext == '.tsv':
+            elif uri.ext == ".tsv":
                 recurse_tsv(uri.read(), recurse_raise_if_uri_not_exist)
-            elif uri.ext == '.csv':
+            elif uri.ext == ".csv":
                 recurse_csv(uri.read(), recurse_raise_if_uri_not_exist)
         else:
-            raise Exception('URI is a valid path but does not exist.')
+            raise Exception("URI is a valid path but does not exist.")
     return None, False
 
 
@@ -251,13 +251,13 @@ def make_files_in_dir(prefix, make_local_empty_dir_d_a=False):
     Returns:
         List of file URIs.
     """
-    file_a = os.path.join(prefix, 'a')
-    file_b_a = os.path.join(prefix, 'b/a')
-    file_b_b = os.path.join(prefix, 'b/b')
-    file_c_a_a = os.path.join(prefix, 'c/a/a')
-    file_c_a_b = os.path.join(prefix, 'c/a/b')
-    file_c_b_a_a = os.path.join(prefix, 'c/b/a/a')
-    file_c_c = os.path.join(prefix, 'c/c')
+    file_a = os.path.join(prefix, "a")
+    file_b_a = os.path.join(prefix, "b/a")
+    file_b_b = os.path.join(prefix, "b/b")
+    file_c_a_a = os.path.join(prefix, "c/a/a")
+    file_c_a_b = os.path.join(prefix, "c/a/b")
+    file_c_b_a_a = os.path.join(prefix, "c/b/a/a")
+    file_c_c = os.path.join(prefix, "c/c")
 
     all_files = [
         file_a,
@@ -270,9 +270,9 @@ def make_files_in_dir(prefix, make_local_empty_dir_d_a=False):
     ]
 
     for uri in all_files:
-        AutoURI(uri).write('')
+        AutoURI(uri).write("")
     if make_local_empty_dir_d_a:
-        path = os.path.join(prefix, 'd/a')
+        path = os.path.join(prefix, "d/a")
         os.makedirs(path, exist_ok=True)
 
     return all_files

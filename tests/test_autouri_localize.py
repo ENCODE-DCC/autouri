@@ -30,7 +30,7 @@ def test_localize_self_ref(
     Indirect self referencing in GCS files suffixed with _self_ref:
         v1.json -> v421.tsv -> v1.json -> ...
     """
-    loc_prefix = os.path.join(local_test_path, 'test_localize_self_ref')
+    loc_prefix = os.path.join(local_test_path, "test_localize_self_ref")
 
     # localization from remote storages
     for j1_json in (gcs_j1_json_self_ref,):
@@ -54,7 +54,7 @@ def test_localize_mixed(
     """Test recursive localization of files on mixed storages
     Target is local storage.
     """
-    loc_prefix = os.path.join(local_test_path, 'test_localize_mixed')
+    loc_prefix = os.path.join(local_test_path, "test_localize_mixed")
 
     # localization from remote storages
     for j1_json in (mixed_j1_json,):

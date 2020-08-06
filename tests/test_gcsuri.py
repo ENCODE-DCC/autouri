@@ -16,73 +16,73 @@ from .files import (
 )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_uri(path) -> Any:
     assert GCSURI(path).uri == path
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_uri_wo_ext(path) -> str:
     assert GCSURI(path).uri_wo_ext == os.path.splitext(path)[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_uri_wo_scheme(path) -> str:
-    assert GCSURI(path).uri_wo_scheme == path.replace('gs://', '', 1)
+    assert GCSURI(path).uri_wo_scheme == path.replace("gs://", "", 1)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_is_valid(path) -> bool:
     """Also tests AutoURI auto-conversion since it's based on is_valid property
     """
-    expected = path.startswith('gs://')
+    expected = path.startswith("gs://")
     assert GCSURI(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == GCSURI
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_dirname(path) -> str:
     assert GCSURI(path).dirname == os.path.dirname(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_dirname_wo_scheme(path) -> str:
     assert GCSURI(path).dirname_wo_scheme == os.path.dirname(path).replace(
-        'gs://', '', 1
+        "gs://", "", 1
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_loc_dirname(path) -> str:
     assert GCSURI(path).loc_dirname == os.path.dirname(path).replace(
-        'gs://', '', 1
-    ).lstrip('/')
+        "gs://", "", 1
+    ).lstrip("/")
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_basename(path) -> str:
     assert GCSURI(path).basename == os.path.basename(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_basename_wo_ext(path) -> str:
     assert GCSURI(path).basename_wo_ext == os.path.splitext(os.path.basename(path))[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_ext(path) -> str:
     assert GCSURI(path).ext == os.path.splitext(path)[1]
 
 
 def test_gcsuri_exists(gcs_v6_txt):
     assert GCSURI(gcs_v6_txt).exists
-    assert not GCSURI(gcs_v6_txt + '.should-not-be-here').exists
-    assert not GCSURI('gs://hey/this/should/not/be/here.txt').exists
+    assert not GCSURI(gcs_v6_txt + ".should-not-be-here").exists
+    assert not GCSURI("gs://hey/this/should/not/be/here.txt").exists
 
 
 def test_gcsuri_mtime(gcs_v6_txt):
-    u = GCSURI(gcs_v6_txt + '.tmp')
-    u.write('temp file for testing')
+    u = GCSURI(gcs_v6_txt + ".tmp")
+    u.write("temp file for testing")
     now = time.time()
     assert now - 10 < u.mtime < now + 10
     u.rm()
@@ -124,7 +124,7 @@ def test_gcsuri_md5_file_uri(gcs_v6_txt):
     )
 
 
-def test_gcsuri_cp_url(gcs_v6_txt, url_test_path) -> 'AutoURI':
+def test_gcsuri_cp_url(gcs_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: gcs -> url
             This will fail as intended since URL is read-only.
@@ -133,14 +133,14 @@ def test_gcsuri_cp_url(gcs_v6_txt, url_test_path) -> 'AutoURI':
     basename = os.path.basename(gcs_v6_txt)
 
     for test_path in (url_test_path,):
-        u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_gcsuri_cp", basename))
         with pytest.raises(ReadOnlyStorageError):
             _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_gcsuri_cp(
     gcs_v6_txt, local_test_path, s3_test_path, gcs_test_path
-) -> 'AutoURI':
+) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: gcs -> local
         s3_test_path: gcs -> s3
@@ -160,7 +160,7 @@ def test_gcsuri_cp(
     basename = os.path.basename(gcs_v6_txt)
 
     for test_path in (local_test_path, gcs_test_path, s3_test_path):
-        u_dest = AutoURI(os.path.join(test_path, 'test_gcsuri_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_gcsuri_cp", basename))
         if u_dest.exists:
             u_dest.rm()
 
@@ -211,33 +211,33 @@ def test_gcsuri_cp(
 
 
 def test_gcsuri_write(gcs_test_path):
-    u = GCSURI(gcs_test_path + '/test_gcsuri_write.tmp')
+    u = GCSURI(gcs_test_path + "/test_gcsuri_write.tmp")
 
     assert not u.exists
-    u.write('test')
-    assert u.exists and u.read() == 'test'
+    u.write("test")
+    assert u.exists and u.read() == "test"
     u.rm()
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('test2', no_lock=True)
-    assert u.exists and u.read() == 'test2'
+    u.write("test2", no_lock=True)
+    assert u.exists and u.read() == "test2"
     u.rm()
     assert not u.exists
 
 
 def test_gcsuri_rm(gcs_test_path):
-    u = GCSURI(gcs_test_path + '/test_gcsuri_rm.tmp')
+    u = GCSURI(gcs_test_path + "/test_gcsuri_rm.tmp")
 
     assert not u.exists
-    u.write('')
+    u.write("")
     assert u.exists
     u.rm()
     assert not u.exists
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('', no_lock=True)
+    u.write("", no_lock=True)
     assert u.exists
     u.rm()
     assert not u.exists
@@ -254,7 +254,7 @@ def test_gcsuri_get_metadata(gcs_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m2.md5 is None
     assert m2.size == v6_txt_size
 
-    u_md5 = GCSURI(gcs_v6_txt + '.md5')
+    u_md5 = GCSURI(gcs_v6_txt + ".md5")
     if u_md5.exists:
         u_md5.rm()
     m3 = u.get_metadata(make_md5_file=True)
@@ -275,7 +275,7 @@ def test_gcsuri_find_all_files(gcs_test_path):
 
     Check if find_all_files() returns correct file (not sub-directory) paths.
     """
-    prefix = os.path.join(gcs_test_path, 'test_gcsuri_find_all_files')
+    prefix = os.path.join(gcs_test_path, "test_gcsuri_find_all_files")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
     all_files_found = GCSURI(prefix).find_all_files()
@@ -289,7 +289,7 @@ def test_gcsuri_rmdir(gcs_test_path):
 
     Check if rmdir() deletes all empty files on given $prefix.
     """
-    prefix = os.path.join(gcs_test_path, 'test_gcsuri_rmdir')
+    prefix = os.path.join(gcs_test_path, "test_gcsuri_rmdir")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=False)
 
     # test rmdir(dry_run=True)
@@ -306,7 +306,7 @@ def test_gcsuri_rmdir(gcs_test_path):
 # original methods in GCSURI
 def test_gcsuri_get_blob(gcs_v6_txt):
     u = GCSURI(gcs_v6_txt)
-    u_non_existing = GCSURI(gcs_v6_txt + '.blah')
+    u_non_existing = GCSURI(gcs_v6_txt + ".blah")
 
     b_new, _ = u.get_blob(new=True)
     assert b_new is not None
@@ -320,14 +320,14 @@ def test_gcsuri_get_blob(gcs_v6_txt):
 
 
 def test_gcsuri_get_bucket_path():
-    assert GCSURI('gs://a/b/c/d/e.txt').get_bucket_path() == ('a', 'b/c/d/e.txt')
-    assert GCSURI('gs://asdflskfjljkfc-asdf/ddfjlfd/d.log').get_bucket_path() == (
-        'asdflskfjljkfc-asdf',
-        'ddfjlfd/d.log',
+    assert GCSURI("gs://a/b/c/d/e.txt").get_bucket_path() == ("a", "b/c/d/e.txt")
+    assert GCSURI("gs://asdflskfjljkfc-asdf/ddfjlfd/d.log").get_bucket_path() == (
+        "asdflskfjljkfc-asdf",
+        "ddfjlfd/d.log",
     )
-    assert GCSURI('gs://ok-test-bucket/hello.txt').get_bucket_path() == (
-        'ok-test-bucket',
-        'hello.txt',
+    assert GCSURI("gs://ok-test-bucket/hello.txt").get_bucket_path() == (
+        "ok-test-bucket",
+        "hello.txt",
     )
 
 
@@ -357,19 +357,19 @@ def test_gcsuri_get_path_sep() -> str:
 
 
 def test_gcsuri_get_schemes() -> Tuple[str, ...]:
-    assert GCSURI.get_schemes() == ('gs://',)
+    assert GCSURI.get_schemes() == ("gs://",)
 
 
 def test_gcsuri_get_loc_suffix() -> str:
-    assert GCSURI.get_loc_suffix() == '.gcs'
+    assert GCSURI.get_loc_suffix() == ".gcs"
 
 
 def test_gcsuri_get_loc_prefix() -> str:
-    test_loc_prefix = 'test_gcsuri_get_loc_prefix'
+    test_loc_prefix = "test_gcsuri_get_loc_prefix"
     GCSURI.init_gcsuri(loc_prefix=test_loc_prefix)
     assert GCSURI.get_loc_prefix() == test_loc_prefix
-    GCSURI.init_gcsuri(loc_prefix='')
-    assert GCSURI.get_loc_prefix() == ''
+    GCSURI.init_gcsuri(loc_prefix="")
+    assert GCSURI.get_loc_prefix() == ""
 
 
 def test_gcsuri_localize(
@@ -438,7 +438,7 @@ def test_gcsuri_localize(
         recursive:
             j1.json
     """
-    loc_prefix = os.path.join(gcs_test_path, 'test_gcsuri_localize')
+    loc_prefix = os.path.join(gcs_test_path, "test_gcsuri_localize")
     # GCSURI.init_gcsuri(use_gsutil_for_s3=True)
 
     for j1_json in (gcs_j1_json,):

@@ -51,7 +51,7 @@ class GCSURILock(BaseFileLock):
         blob, bucket_obj = u.get_blob(new=True)
         if blob is not None:
             try:
-                blob.upload_from_string('')
+                blob.upload_from_string("")
                 blob.temporary_hold = True
                 blob.patch()
                 self._lock_file_fd = id(self)
@@ -104,7 +104,7 @@ class GCSURI(URIBase):
             End point for a bucket with public access + key path
     """
 
-    PRIVATE_KEY_FILE: str = ''
+    PRIVATE_KEY_FILE: str = ""
     DURATION_PRESIGNED_URL: int = 4233600
 
     RETRY_BUCKET: int = 3
@@ -113,10 +113,10 @@ class GCSURI(URIBase):
 
     _CACHED_GCS_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
-    _GCS_PUBLIC_URL_FORMAT = 'http://storage.googleapis.com/{bucket}/{path}'
+    _GCS_PUBLIC_URL_FORMAT = "http://storage.googleapis.com/{bucket}/{path}"
 
-    _LOC_SUFFIX = '.gcs'
-    _SCHEMES = ('gs://',)
+    _LOC_SUFFIX = ".gcs"
+    _SCHEMES = ("gs://",)
 
     def __init__(self, uri, thread_id=-1):
         super().__init__(uri, thread_id=thread_id)
@@ -144,21 +144,21 @@ class GCSURI(URIBase):
                 ex = True
 
                 if not skip_md5:
-                    if 'md5hash' in h:
-                        md5 = parse_md5_str(h['md5hash'])
-                    elif 'etag' in h:
-                        md5 = parse_md5_str(h['etag'])
+                    if "md5hash" in h:
+                        md5 = parse_md5_str(h["md5hash"])
+                    elif "etag" in h:
+                        md5 = parse_md5_str(h["etag"])
                     if md5 is None:
                         # make_md5_file is ignored for GCSURI
                         md5 = self.md5_from_file
 
-                if 'size' in h:
-                    sz = int(h['size'])
+                if "size" in h:
+                    sz = int(h["size"])
 
-                if 'updated' in h:
-                    mt = get_seconds_from_epoch(h['updated'])
-                elif 'timecreated' in h:
-                    mt = get_seconds_from_epoch(h['timecreated'])
+                if "updated" in h:
+                    mt = get_seconds_from_epoch(h["updated"])
+                elif "timecreated" in h:
+                    mt = get_seconds_from_epoch(h["timecreated"])
 
         except Exception:
             pass
@@ -214,7 +214,7 @@ class GCSURI(URIBase):
             src_blob, src_bucket = self.get_blob()
 
             if src_blob is None:
-                raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
+                raise ValueError("Blob does not exist for {f}".format(f=self._uri))
 
             if isinstance(dest_uri, GCSURI):
                 _, dest_path = dest_uri.get_bucket_path()
@@ -231,7 +231,7 @@ class GCSURI(URIBase):
 
         elif isinstance(dest_uri, S3URI):
             if GCSURI.USE_GSUTIL_FOR_S3:
-                rc = check_call(['gsutil', '-q', 'cp', self._uri, dest_uri._uri])
+                rc = check_call(["gsutil", "-q", "cp", self._uri, dest_uri._uri])
                 return rc == 0
             else:
                 # use local temporary file instead
@@ -263,7 +263,7 @@ class GCSURI(URIBase):
 
         elif isinstance(src_uri, S3URI):
             if GCSURI.USE_GSUTIL_FOR_S3:
-                rc = check_call(['gsutil', '-q', 'cp', src_uri._uri, self._uri])
+                rc = check_call(["gsutil", "-q", "cp", src_uri._uri, self._uri])
                 return rc == 0
             else:
                 # use local temporary file instead
@@ -329,7 +329,7 @@ class GCSURI(URIBase):
         arr = self.uri_wo_scheme.split(GCSURI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
-            bucket, path = arr[0], ''
+            bucket, path = arr[0], ""
         else:
             bucket, path = arr
         return bucket, path
@@ -354,13 +354,13 @@ class GCSURI(URIBase):
             private_key_file = os.path.expanduser(private_key_file)
         if not os.path.exists(private_key_file):
             raise Exception(
-                'GCS private key file not found. f:{f}'.format(f=private_key_file)
+                "GCS private key file not found. f:{f}".format(f=private_key_file)
             )
         credentials = Credentials.from_service_account_file(private_key_file)
         duration = duration if duration is not None else GCSURI.DURATION_PRESIGNED_URL
         blob, _ = self.get_blob()
         if blob is None:
-            raise ValueError('Blob does not exist for {f}'.format(f=self._uri))
+            raise ValueError("Blob does not exist for {f}".format(f=self._uri))
         url = blob.generate_signed_url(
             expiration=timedelta(seconds=duration), credentials=credentials
         )

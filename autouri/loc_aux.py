@@ -48,7 +48,7 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
                 elif lst is not None:
                     lst[lst_idx] = new_val
                 else:
-                    raise ValueError('Recursion failed.')
+                    raise ValueError("Recursion failed.")
         return modified
 
     d = json.loads(contents)
@@ -58,7 +58,7 @@ def recurse_json(contents: str, fnc: Callable) -> Tuple[str, bool]:
     return json.dumps(d, indent=4), modified
 
 
-def recurse_tsv(contents: str, fnc: Callable, delim: str = '\t') -> Tuple[str, bool]:
+def recurse_tsv(contents: str, fnc: Callable, delim: str = "\t") -> Tuple[str, bool]:
     """Recurse with a callback function in TSV contents.
     Just visit each line and look at values only.
 
@@ -77,7 +77,7 @@ def recurse_tsv(contents: str, fnc: Callable, delim: str = '\t') -> Tuple[str, b
     """
     modified = False
     new_contents = []
-    for line in contents.split('\n'):
+    for line in contents.split("\n"):
         new_values = []
         for v in line.split(delim):
             new_val, modified_ = fnc(v)
@@ -88,8 +88,8 @@ def recurse_tsv(contents: str, fnc: Callable, delim: str = '\t') -> Tuple[str, b
                 new_values.append(v)
         new_contents.append(delim.join(new_values))
 
-    return '\n'.join(new_contents), modified
+    return "\n".join(new_contents), modified
 
 
-def recurse_csv(contents: str, fnc: Callable, delim: str = ',') -> Tuple[str, bool]:
+def recurse_csv(contents: str, fnc: Callable, delim: str = ",") -> Tuple[str, bool]:
     return recurse_tsv(contents, fnc, delim=delim)

@@ -16,22 +16,22 @@ from .files import (
 )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_uri(path) -> Any:
     assert AbsPath(path).uri == os.path.expanduser(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_uri_wo_ext(path) -> str:
     assert AbsPath(path).uri_wo_ext == os.path.splitext(os.path.expanduser(path))[0]
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_uri_wo_scheme(path) -> str:
     assert AbsPath(path).uri_wo_scheme == os.path.expanduser(path)
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_is_valid(path) -> bool:
     """Also tests AutoURI auto-conversion since it's based on is_valid property
     """
@@ -40,29 +40,29 @@ def test_abspath_is_valid(path) -> bool:
     assert not expected or type(AutoURI(path)) == AbsPath
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_dirname(path) -> str:
     assert AbsPath(path).dirname == os.path.dirname(os.path.expanduser(path))
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_dirname_wo_scheme(path) -> str:
     assert AbsPath(path).dirname_wo_scheme == os.path.dirname(os.path.expanduser(path))
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_loc_dirname(path) -> str:
     assert AbsPath(path).loc_dirname == os.path.dirname(os.path.expanduser(path)).strip(
         os.path.sep
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_basename(path) -> str:
     assert AbsPath(path).basename == os.path.basename(os.path.expanduser(path))
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_basename_wo_ext(path) -> str:
     assert (
         AbsPath(path).basename_wo_ext
@@ -70,20 +70,20 @@ def test_abspath_basename_wo_ext(path) -> str:
     )
 
 
-@pytest.mark.parametrize('path', common_paths())
+@pytest.mark.parametrize("path", common_paths())
 def test_abspath_ext(path) -> str:
     assert AbsPath(path).ext == os.path.splitext(os.path.expanduser(path))[1]
 
 
 def test_abspath_exists(local_v6_txt):
     assert AbsPath(local_v6_txt).exists
-    assert not AbsPath(local_v6_txt + '.should-not-be-here').exists
-    assert not AbsPath('/hey/this/should/not/be/here.txt').exists
+    assert not AbsPath(local_v6_txt + ".should-not-be-here").exists
+    assert not AbsPath("/hey/this/should/not/be/here.txt").exists
 
 
 def test_abspath_mtime(local_v6_txt):
-    u = AbsPath(local_v6_txt + '.tmp')
-    u.write('temp file for testing')
+    u = AbsPath(local_v6_txt + ".tmp")
+    u.write("temp file for testing")
     now = time.time()
     assert now - 10 < u.mtime < now + 10
     u.rm()
@@ -120,7 +120,7 @@ def test_abspath_md5_file_uri(local_v6_txt):
     )
 
 
-def test_abspath_cp_url(local_v6_txt, url_test_path) -> 'AutoURI':
+def test_abspath_cp_url(local_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         url_test_path: local -> url
             This will fail as intended since URL is read-only.
@@ -129,14 +129,14 @@ def test_abspath_cp_url(local_v6_txt, url_test_path) -> 'AutoURI':
     basename = os.path.basename(local_v6_txt)
 
     for test_path in (url_test_path,):
-        u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_abspath_cp", basename))
         with pytest.raises(ReadOnlyStorageError):
             _, ret = u.cp(u_dest, return_flag=True)
 
 
 def test_abspath_cp(
     local_v6_txt, local_test_path, s3_test_path, gcs_test_path, url_test_path
-) -> 'AutoURI':
+) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
         local_test_path: local -> local
         s3_test_path: local -> s3
@@ -156,7 +156,7 @@ def test_abspath_cp(
     basename = os.path.basename(local_v6_txt)
 
     for test_path in (local_test_path, s3_test_path, gcs_test_path):
-        u_dest = AutoURI(os.path.join(test_path, 'test_abspath_cp', basename))
+        u_dest = AutoURI(os.path.join(test_path, "test_abspath_cp", basename))
         if u_dest.exists:
             u_dest.rm()
 
@@ -207,39 +207,39 @@ def test_abspath_cp(
 
 
 def test_abspath_write(local_test_path):
-    u = AbsPath(local_test_path + '/test_abspath_write.tmp')
+    u = AbsPath(local_test_path + "/test_abspath_write.tmp")
 
     assert not u.exists
-    u.write('test')
-    assert u.exists and u.read() == 'test'
+    u.write("test")
+    assert u.exists and u.read() == "test"
     u.rm()
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('test2', no_lock=True)
-    assert u.exists and u.read() == 'test2'
+    u.write("test2", no_lock=True)
+    assert u.exists and u.read() == "test2"
     u.rm()
     assert not u.exists
 
 
 def test_abspath_write_no_permission():
-    u = AbsPath('/test-permission-denied/x.tmp')
+    u = AbsPath("/test-permission-denied/x.tmp")
     with pytest.raises(PermissionError):
-        u.write('test')
+        u.write("test")
 
 
 def test_abspath_rm(local_test_path):
-    u = AbsPath(local_test_path + '/test_abspath_rm.tmp')
+    u = AbsPath(local_test_path + "/test_abspath_rm.tmp")
 
     assert not u.exists
-    u.write('')
+    u.write("")
     assert u.exists
     u.rm()
     assert not u.exists
 
     # this will be tested more with multiple threads in test_race_cond.py
     assert not u.exists
-    u.write('', no_lock=True)
+    u.write("", no_lock=True)
     assert u.exists
     u.rm()
     assert not u.exists
@@ -256,7 +256,7 @@ def test_abspath_get_metadata(local_v6_txt, v6_txt_size, v6_txt_md5_hash):
     assert m2.md5 is None
     assert m2.size == v6_txt_size
 
-    u_md5 = AbsPath(local_v6_txt + '.md5')
+    u_md5 = AbsPath(local_v6_txt + ".md5")
     if u_md5.exists:
         u_md5.rm()
     m3 = u.get_metadata(make_md5_file=True)
@@ -278,16 +278,16 @@ def test_abspath_find_all_files(local_test_path):
     Check if find_all_files() returns correct file (not sub-directory) paths.
     Also check if find_all_files() does not return an empty sub-directory.
     """
-    prefix = os.path.join(local_test_path, 'test_abspath_find_all_files')
+    prefix = os.path.join(local_test_path, "test_abspath_find_all_files")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
-    empty_sub_dir = os.path.join(prefix, 'd', 'a')
+    empty_sub_dir = os.path.join(prefix, "d", "a")
     assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
     all_files_found = AbsPath(prefix).find_all_files()
     assert sorted(all_files_found) == sorted(all_files)
     for file in all_files:
         assert AbsPath(file).exists
-        assert file.rstrip('/') != empty_sub_dir.rstrip('/')
+        assert file.rstrip("/") != empty_sub_dir.rstrip("/")
 
 
 def test_abspath_rmdir(local_test_path):
@@ -296,9 +296,9 @@ def test_abspath_rmdir(local_test_path):
     Check if rmdir() deletes the root directory itself including
     all empty files and empty directory on given $prefix.
     """
-    prefix = os.path.join(local_test_path, 'test_abspath_rmdir')
+    prefix = os.path.join(local_test_path, "test_abspath_rmdir")
     all_files = make_files_in_dir(prefix, make_local_empty_dir_d_a=True)
-    empty_sub_dir = os.path.join(prefix, 'd', 'a')
+    empty_sub_dir = os.path.join(prefix, "d", "a")
     assert os.path.exists(empty_sub_dir) and os.path.isdir(empty_sub_dir)
 
     # test rmdir(dry_run=True)
@@ -319,7 +319,7 @@ def test_abspath_get_mapped_url(local_v6_txt):
     u = AbsPath(local_v6_txt)
     dirname = os.path.dirname(local_v6_txt)
     basename = os.path.basename(local_v6_txt)
-    url_prefix = 'http://my.test.com'
+    url_prefix = "http://my.test.com"
 
     AbsPath.init_abspath(map_path_to_url={dirname: url_prefix})
     assert u.get_mapped_url() == os.path.join(url_prefix, basename)
@@ -329,14 +329,14 @@ def test_abspath_get_mapped_url(local_v6_txt):
 
 
 def test_abspath_mkdirname(local_test_path):
-    f = os.path.join(local_test_path, 'test_abspath_mkdirname', 'tmp.txt')
+    f = os.path.join(local_test_path, "test_abspath_mkdirname", "tmp.txt")
     AbsPath(f).mkdir_dirname()
     assert os.path.exists(os.path.dirname(f))
 
 
 def test_abspath_soft_link(local_test_path, local_v6_txt):
     u_src = AbsPath(local_v6_txt)
-    f = os.path.join(local_test_path, 'test_abspath_soft_link', 'v6.txt')
+    f = os.path.join(local_test_path, "test_abspath_soft_link", "v6.txt")
     u_target = AbsPath(f)
     u_target.mkdir_dirname()
     u_src.soft_link(u_target)
@@ -354,30 +354,30 @@ def test_abspath_soft_link(local_test_path, local_v6_txt):
 # staticmethods
 def test_abspath_get_abspath_if_exists():
     # write a local file on CWD.
-    test_local_file_abspath = os.path.join(os.getcwd(), 'test.txt')
+    test_local_file_abspath = os.path.join(os.getcwd(), "test.txt")
     u = AbsPath(test_local_file_abspath)
     if u.exists:
         u.rm()
 
     # if it doesn't exist
-    assert AbsPath.get_abspath_if_exists('test.txt') == 'test.txt'
-    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == 'test.txt'
+    assert AbsPath.get_abspath_if_exists("test.txt") == "test.txt"
+    assert AbsPath.get_abspath_if_exists(AutoURI("test.txt")) == "test.txt"
 
-    u.write('hello-world')
+    u.write("hello-world")
 
     # if it exists
-    assert AbsPath.get_abspath_if_exists('test.txt') == test_local_file_abspath
-    assert AbsPath.get_abspath_if_exists(AutoURI('test.txt')) == test_local_file_abspath
+    assert AbsPath.get_abspath_if_exists("test.txt") == test_local_file_abspath
+    assert AbsPath.get_abspath_if_exists(AutoURI("test.txt")) == test_local_file_abspath
 
-    assert AbsPath.get_abspath_if_exists('tttttttttest.txt') == 'tttttttttest.txt'
+    assert AbsPath.get_abspath_if_exists("tttttttttest.txt") == "tttttttttest.txt"
     assert (
-        AbsPath.get_abspath_if_exists(AutoURI('tttttttttest.txt')) == 'tttttttttest.txt'
+        AbsPath.get_abspath_if_exists(AutoURI("tttttttttest.txt")) == "tttttttttest.txt"
     )
     assert (
-        AbsPath.get_abspath_if_exists('~/if-it-does-not-exist')
-        == '~/if-it-does-not-exist'
+        AbsPath.get_abspath_if_exists("~/if-it-does-not-exist")
+        == "~/if-it-does-not-exist"
     )
-    assert AbsPath.get_abspath_if_exists('non-existing-file') == 'non-existing-file'
+    assert AbsPath.get_abspath_if_exists("non-existing-file") == "non-existing-file"
 
     u.rm()
 
@@ -392,15 +392,15 @@ def test_abspath_get_schemes() -> Tuple[str, ...]:
 
 
 def test_abspath_get_loc_suffix() -> str:
-    assert AbsPath.get_loc_suffix() == '.local'
+    assert AbsPath.get_loc_suffix() == ".local"
 
 
 def test_abspath_get_loc_prefix() -> str:
-    test_loc_prefix = 'test_abspath_get_loc_prefix'
+    test_loc_prefix = "test_abspath_get_loc_prefix"
     AbsPath.init_abspath(loc_prefix=test_loc_prefix)
     assert AbsPath.get_loc_prefix() == test_loc_prefix
-    AbsPath.init_abspath(loc_prefix='')
-    assert AbsPath.get_loc_prefix() == ''
+    AbsPath.init_abspath(loc_prefix="")
+    assert AbsPath.get_loc_prefix() == ""
 
 
 def test_abspath_localize(
@@ -469,7 +469,7 @@ def test_abspath_localize(
         recursive:
             j1.json
     """
-    loc_prefix = os.path.join(local_test_path, 'test_abspath_localize')
+    loc_prefix = os.path.join(local_test_path, "test_abspath_localize")
 
     for j1_json in (local_j1_json,):
         # localization from local storage

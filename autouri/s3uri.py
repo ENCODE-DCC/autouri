@@ -87,10 +87,10 @@ class S3URI(URIBase):
 
     _CACHED_BOTO3_CLIENT_PER_THREAD = {}
     _CACHED_PRESIGNED_URLS = {}
-    _S3_PUBLIC_URL_FORMAT = 'http://{bucket}.s3.amazonaws.com/{path}'
+    _S3_PUBLIC_URL_FORMAT = "http://{bucket}.s3.amazonaws.com/{path}"
 
-    _LOC_SUFFIX = '.s3'
-    _SCHEMES = ('s3://',)
+    _LOC_SUFFIX = ".s3"
+    _SCHEMES = ("s3://",)
 
     def __init__(self, uri, thread_id=-1):
         super().__init__(uri, thread_id=thread_id)
@@ -113,27 +113,27 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         try:
-            m = cl.head_object(Bucket=bucket, Key=path)['ResponseMetadata'][
-                'HTTPHeaders'
+            m = cl.head_object(Bucket=bucket, Key=path)["ResponseMetadata"][
+                "HTTPHeaders"
             ]
             # make keys lower-case
             h = {k.lower(): v for k, v in m.items()}
             ex = True
 
             if not skip_md5:
-                if 'content-md5' in h:
-                    md5 = parse_md5_str(h['content-md5'])
-                elif 'etag' in h:
-                    md5 = parse_md5_str(h['etag'])
+                if "content-md5" in h:
+                    md5 = parse_md5_str(h["content-md5"])
+                elif "etag" in h:
+                    md5 = parse_md5_str(h["etag"])
                 if md5 is None:
                     # make_md5_file is ignored for S3URI
                     md5 = self.md5_from_file
 
-            if 'content-length' in h:
-                sz = int(h['content-length'])
+            if "content-length" in h:
+                sz = int(h["content-length"])
 
-            if 'last-modified' in h:
-                mt = get_seconds_from_epoch(h['last-modified'])
+            if "last-modified" in h:
+                mt = get_seconds_from_epoch(h["last-modified"])
 
         except Exception:
             pass
@@ -146,8 +146,8 @@ class S3URI(URIBase):
 
         obj = cl.get_object(Bucket=bucket, Key=path)
         if byte:
-            return obj['Body'].read()
-        return obj['Body'].read().decode()
+            return obj["Body"].read()
+        return obj["Body"].read().decode()
 
     def find_all_files(self):
         cl = S3URI.get_boto3_client(self._thread_id)
@@ -157,11 +157,11 @@ class S3URI(URIBase):
             path = path.rstrip(sep) + sep
 
         result = []
-        objs = cl.list_objects_v2(Bucket=bucket, Prefix=path).get('Contents')
+        objs = cl.list_objects_v2(Bucket=bucket, Prefix=path).get("Contents")
         if objs:
             for obj in objs:
                 scheme = S3URI.get_schemes()[0]
-                uri = scheme + sep.join([bucket, obj['Key']])
+                uri = scheme + sep.join([bucket, obj["Key"]])
                 result.append(uri)
         return result
 
@@ -170,7 +170,7 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
 
         if isinstance(s, str):
-            b = s.encode('ascii')
+            b = s.encode("ascii")
         else:
             b = s
         cl.put_object(Bucket=bucket, Key=path, Body=b)
@@ -197,7 +197,7 @@ class S3URI(URIBase):
         if isinstance(dest_uri, S3URI):
             dest_bucket, dest_path = dest_uri.get_bucket_path()
             cl.copy_object(
-                CopySource={'Bucket': bucket, 'Key': path},
+                CopySource={"Bucket": bucket, "Key": path},
                 Bucket=dest_bucket,
                 Key=dest_path,
             )
@@ -205,7 +205,7 @@ class S3URI(URIBase):
 
         elif isinstance(dest_uri, AbsPath):
             dest_uri.mkdir_dirname()
-            with open(dest_uri._uri, 'wb') as fp:
+            with open(dest_uri._uri, "wb") as fp:
                 cl.download_fileobj(Bucket=bucket, Key=path, Fileobj=fp)
             return True
         return False
@@ -248,7 +248,7 @@ class S3URI(URIBase):
         arr = self.uri_wo_scheme.split(S3URI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
-            bucket, path = arr[0], ''
+            bucket, path = arr[0], ""
         else:
             bucket, path = arr
         return bucket, path
@@ -267,7 +267,7 @@ class S3URI(URIBase):
         bucket, path = self.get_bucket_path()
         duration = duration if duration is not None else S3URI.DURATION_PRESIGNED_URL
         url = cl.generate_presigned_url(
-            'get_object', Params={'Bucket': bucket, 'Key': path}, ExpiresIn=duration
+            "get_object", Params={"Bucket": bucket, "Key": path}, ExpiresIn=duration
         )
         cache[self._uri] = url
         return url
@@ -281,7 +281,7 @@ class S3URI(URIBase):
         if thread_id in S3URI._CACHED_BOTO3_CLIENT_PER_THREAD:
             return S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id]
         else:
-            cl = client('s3')
+            cl = client("s3")
             S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id] = cl
             return cl
 

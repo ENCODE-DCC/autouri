@@ -49,7 +49,7 @@ def write_v6_txt(x):
 
 
 def run_write_v6_txt(prefix, nth):
-    s = os.path.join(prefix, 'v6.txt')
+    s = os.path.join(prefix, "v6.txt")
     u = AutoURI(s)
     if u.exists:
         u.rm()
@@ -60,18 +60,18 @@ def run_write_v6_txt(prefix, nth):
 
 
 def test_race_cond_autouri_write_local(local_test_path):
-    prefix = os.path.join(local_test_path, 'test_race_cond_autouri_write_local')
+    prefix = os.path.join(local_test_path, "test_race_cond_autouri_write_local")
     nth = 50
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_gcs(gcs_test_path):
-    prefix = os.path.join(gcs_test_path, 'test_race_cond_autouri_write_gcs')
+    prefix = os.path.join(gcs_test_path, "test_race_cond_autouri_write_gcs")
     nth = 10
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_s3(s3_test_path):
     nth = 5
-    prefix = os.path.join(s3_test_path, 'test_race_cond_autouri_write_s3')
+    prefix = os.path.join(s3_test_path, "test_race_cond_autouri_write_s3")
     run_write_v6_txt(prefix, nth)

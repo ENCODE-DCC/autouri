@@ -24,8 +24,8 @@ class HTTPURL(URIBase):
 
     HTTP_CHUNK_SIZE: int = 256 * 1024
 
-    _LOC_SUFFIX = '.url'
-    _SCHEMES = ('http://', 'https://')
+    _LOC_SUFFIX = ".url"
+    _SCHEMES = ("http://", "https://")
 
     def __init__(self, uri, thread_id=-1):
         super().__init__(uri, thread_id=thread_id)
@@ -35,7 +35,7 @@ class HTTPURL(URIBase):
         """Dirname of URL is not very meaningful.
         Therefore, hash string of the whole URL string is used instead for localization.
         """
-        return hashlib.md5(self._uri.encode('utf-8')).hexdigest()
+        return hashlib.md5(self._uri.encode("utf-8")).hexdigest()
 
     @property
     def basename(self):
@@ -43,11 +43,11 @@ class HTTPURL(URIBase):
         This class can only work with a URL with an explicit basename
         which can be suffixed with extra parameters starting with ? only.
         """
-        return super().basename.split('?', 1)[0]
+        return super().basename.split("?", 1)[0]
 
     def _get_lock(self, timeout=None, poll_interval=None):
         raise ReadOnlyStorageError(
-            'Cannot lock on a read-only storage. {f}'.format(f=self._uri)
+            "Cannot lock on a read-only storage. {f}".format(f=self._uri)
         )
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
@@ -73,26 +73,26 @@ class HTTPURL(URIBase):
             ex = True
 
             if not skip_md5:
-                if 'content-md5' in h:
-                    md5 = parse_md5_str(h['content-md5'])
-                elif 'x-goog-hash' in h:
-                    hashes = h['x-goog-hash'].strip().split(',')
+                if "content-md5" in h:
+                    md5 = parse_md5_str(h["content-md5"])
+                elif "x-goog-hash" in h:
+                    hashes = h["x-goog-hash"].strip().split(",")
                     for hs in hashes:
-                        if hs.strip().startswith('md5='):
-                            raw = hs.strip().replace('md5=', '', 1)
+                        if hs.strip().startswith("md5="):
+                            raw = hs.strip().replace("md5=", "", 1)
                             md5 = parse_md5_str(raw)
-                if md5 is None and 'etag' in h:
-                    md5 = parse_md5_str(h['etag'])
+                if md5 is None and "etag" in h:
+                    md5 = parse_md5_str(h["etag"])
                 if md5 is None:
                     md5 = self.md5_from_file
 
-            if 'content-length' in h:
-                sz = int(h['content-length'])
-            elif 'x-goog-stored-content-length' in h:
-                sz = int(h['x-goog-stored-content-length'])
+            if "content-length" in h:
+                sz = int(h["content-length"])
+            elif "x-goog-stored-content-length" in h:
+                sz = int(h["x-goog-stored-content-length"])
 
-            if 'last-modified' in h:
-                mt = get_seconds_from_epoch(h['last-modified'])
+            if "last-modified" in h:
+                mt = get_seconds_from_epoch(h["last-modified"])
 
         except requests.exceptions.ConnectionError:
             pass
@@ -118,16 +118,16 @@ class HTTPURL(URIBase):
             return b.decode()
 
     def find_all_files(self):
-        raise NotImplementedError('find_all_files() is not available for URLs.')
+        raise NotImplementedError("find_all_files() is not available for URLs.")
 
     def _write(self, s):
         raise ReadOnlyStorageError(
-            'Cannot write on a read-only storage. {f}'.format(f=self._uri)
+            "Cannot write on a read-only storage. {f}".format(f=self._uri)
         )
 
     def _rm(self):
         raise ReadOnlyStorageError(
-            'Cannot remove a file on a read-only storage. {f}'.format(f=self._uri)
+            "Cannot remove a file on a read-only storage. {f}".format(f=self._uri)
         )
 
     def _cp(self, dest_uri):
@@ -147,7 +147,7 @@ class HTTPURL(URIBase):
             )
             r.raise_for_status()
             dest_uri.mkdir_dirname()
-            with open(dest_uri._uri, 'wb') as f:
+            with open(dest_uri._uri, "wb") as f:
                 for chunk in r.iter_content(chunk_size=HTTPURL.HTTP_CHUNK_SIZE):
                     if chunk:
                         f.write(chunk)
@@ -156,7 +156,7 @@ class HTTPURL(URIBase):
 
     def _cp_from(self, src_uri):
         raise ReadOnlyStorageError(
-            'Cannot copy to a read-only storage. {f}'.format(f=self._uri)
+            "Cannot copy to a read-only storage. {f}".format(f=self._uri)
         )
 
     @staticmethod
@@ -169,6 +169,6 @@ class HTTPURL(URIBase):
             HTTPURL.HTTP_CHUNK_SIZE = http_chunk_size
         if HTTPURL.HTTP_CHUNK_SIZE % (256 * 1024) > 0:
             raise ValueError(
-                'HTTPURL.HTTP_CHUNK_SIZE must be a multiple of 256 KB (256*1024) '
-                'to be compatible with cloud storage APIs (GCS and AWS S3).'
+                "HTTPURL.HTTP_CHUNK_SIZE must be a multiple of 256 KB (256*1024) "
+                "to be compatible with cloud storage APIs (GCS and AWS S3)."
             )

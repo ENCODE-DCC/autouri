@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from dateparser import parse as dateparser_parse
 from dateutil.parser import parse as dateutil_parse
 
-URIMetadata = namedtuple('URIMetadata', ('exists', 'mtime', 'size', 'md5'))
+URIMetadata = namedtuple("URIMetadata", ("exists", "mtime", "size", "md5"))
 
 
 def get_seconds_from_epoch(timestamp: str) -> float:
@@ -24,7 +24,7 @@ def get_seconds_from_epoch(timestamp: str) -> float:
             utc_t = dateutil_parse(timestamp)
     except Exception:
         pass
-    if utc_t is None or utc_t.tzname() not in ('UTC', 'Z'):
+    if utc_t is None or utc_t.tzname() not in ("UTC", "Z"):
         utc_t = dateparser_parse(timestamp)
     utc_t = utc_t.astimezone(timezone.utc)
     return (utc_t - utc_epoch).total_seconds()
@@ -37,7 +37,7 @@ def base64_to_hex(b: str) -> str:
 def parse_md5_str(raw: str) -> str:
     """Check if it's based on base64 then convert it to hexadecimal string.
     """
-    raw = raw.strip('"\'')
+    raw = raw.strip("\"'")
     if len(raw) == 32:
         return raw
     else:

@@ -30,7 +30,7 @@ class AbsPath(URIBase):
     MAP_PATH_TO_URL: Dict[str, str] = dict()
     MD5_CALC_CHUNK_SIZE: int = 4096
 
-    _LOC_SUFFIX = '.local'
+    _LOC_SUFFIX = ".local"
     _PATH_SEP = os.sep
 
     def __init__(self, uri, thread_id=-1):
@@ -48,7 +48,7 @@ class AbsPath(URIBase):
         """
         if not os.path.exists(self._uri):
             raise FileNotFoundError(
-                'Directory does not exist. deleted already? {dir}'.format(dir=self._uri)
+                "Directory does not exist. deleted already? {dir}".format(dir=self._uri)
             )
         if dry_run:
             super().rmdir(dry_run=True, no_lock=no_lock)
@@ -91,14 +91,14 @@ class AbsPath(URIBase):
 
     def read(self, byte=False):
         if byte:
-            param = 'rb'
+            param = "rb"
         else:
-            param = 'r'
+            param = "r"
         with open(self._uri, param) as fp:
             return fp.read()
 
     def find_all_files(self):
-        query = os.path.join(self._uri, '**')
+        query = os.path.join(self._uri, "**")
         result = []
         for f in glob.glob(query, recursive=True):
             if os.path.isfile(f):
@@ -108,9 +108,9 @@ class AbsPath(URIBase):
     def _write(self, s):
         self.mkdir_dirname()
         if isinstance(s, str):
-            param = 'w'
+            param = "w"
         else:
-            param = 'wb'
+            param = "wb"
         with open(self._uri, param) as fp:
             fp.write(s)
         return
@@ -129,7 +129,7 @@ class AbsPath(URIBase):
                 copyfile(self._uri, dest_uri._uri, follow_symlinks=True)
             except SameFileError:
                 logger.debug(
-                    'cp: ignored SameFileError. src={src}, dest={dest}'.format(
+                    "cp: ignored SameFileError. src={src}, dest={dest}".format(
                         src=self._uri, dest=dest_uri._uri
                     )
                 )
@@ -164,7 +164,7 @@ class AbsPath(URIBase):
         os.makedirs(self.dirname, exist_ok=True)
         if not os.access(self.dirname, os.W_OK):
             raise PermissionError(
-                'No permission to write on directory: {d}'.format(d=self.dirname)
+                "No permission to write on directory: {d}".format(d=self.dirname)
             )
         return
 
@@ -181,7 +181,7 @@ class AbsPath(URIBase):
         target = AbsPath(target)
         if not target.is_valid:
             raise ValueError(
-                'Target path is not a valid abs path: {t}.'.format(t=target.uri)
+                "Target path is not a valid abs path: {t}.".format(t=target.uri)
             )
         try:
             target.mkdir_dirname()
@@ -197,8 +197,8 @@ class AbsPath(URIBase):
         """Expensive md5 calculation
         """
         hash_md5 = hashlib.md5()
-        with open(self._uri, 'rb') as fp:
-            for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b''):
+        with open(self._uri, "rb") as fp:
+            for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b""):
                 hash_md5.update(chunk)
         return hash_md5.hexdigest()
 
