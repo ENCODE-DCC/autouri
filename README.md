@@ -147,6 +147,14 @@ optional arguments:
         $ gcloud auth activate-service-account --key-file=[YOUR_JSON_KEY.json]
         $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
         ```
+
+        Or import and call `google_auth()`.
+        ```python
+        import autouri
+        from autouri.gcsuri import google_auth
+
+        google_auth('YOUR_JSON_KEY.json')
+        ```
     Then set your default project.
     ```
     $ gcloud config set project [YOUR_GCP_PROJECT_ID]
