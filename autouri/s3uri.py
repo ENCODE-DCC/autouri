@@ -77,7 +77,7 @@ class S3URI(URIBase):
             Duration for presigned URLs in seconds.
 
     Protected class constants:
-        _CACHED_BOTO3_CLIENT_PER_THREAD:
+        _CACHED_BOTO3_CLIENTS:
         _CACHED_PRESIGNED_URLS:
         _S3_PUBLIC_URL_FORMAT:
             End point for a bucket with public access + key path
@@ -85,7 +85,7 @@ class S3URI(URIBase):
 
     DURATION_PRESIGNED_URL: int = 4233600
 
-    _CACHED_BOTO3_CLIENT_PER_THREAD = {}
+    _CACHED_BOTO3_CLIENTS = {}
     _CACHED_PRESIGNED_URLS = {}
     _S3_PUBLIC_URL_FORMAT = "http://{bucket}.s3.amazonaws.com/{path}"
 
@@ -278,11 +278,11 @@ class S3URI(URIBase):
 
     @staticmethod
     def get_boto3_client(thread_id=-1) -> client:
-        if thread_id in S3URI._CACHED_BOTO3_CLIENT_PER_THREAD:
-            return S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id]
+        if thread_id in S3URI._CACHED_BOTO3_CLIENTS:
+            return S3URI._CACHED_BOTO3_CLIENTS[thread_id]
         else:
             cl = client("s3")
-            S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id] = cl
+            S3URI._CACHED_BOTO3_CLIENTS[thread_id] = cl
             return cl
 
     @staticmethod

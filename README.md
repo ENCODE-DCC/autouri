@@ -140,7 +140,7 @@ optional arguments:
 - GCS: Use `gcloud` CLI.
     - Using end-user credentials: You will be asked to enter credentials of your Google account.
         ```
-        $ gcloud init
+        $ gcloud auth application-default login --no-launch-browser
         ```
     - Using service account credentials: If you use a service account and a JSON key file associated with it.
         ```
