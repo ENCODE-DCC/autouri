@@ -282,7 +282,7 @@ class GCSURI(URIBase):
 
             if isinstance(dest_uri, GCSURI):
                 _, dest_path = dest_uri.get_bucket_path()
-                _, dest_bucket = dest_uri.get_blob()
+                _, dest_bucket = dest_uri.get_blob(new=True)
                 src_bucket.copy_blob(src_blob, dest_bucket, dest_path)
                 return True
 
@@ -399,8 +399,8 @@ class GCSURI(URIBase):
             except Exception:
                 time.sleep(GCSURI.RETRY_BUCKET_DELAY)
         if blob is None:
-            raise NotFound(
-                "Blob doesn't exist. lack of {access_type} permission? {uri}".format(
+            raise ValueError(
+                "GCS blob does not exist. lack of {access_type} permission? {uri}".format(
                     access_type="write" if new else "read", uri=self._uri
                 )
             )
