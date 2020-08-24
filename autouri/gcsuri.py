@@ -389,7 +389,7 @@ class GCSURI(URIBase):
                 break
             except Forbidden:
                 logger.debug(
-                    "Bucket/blob is forbidden. " "Trying again with anonymous client."
+                    "Bucket/blob is forbidden. Trying again with anonymous client."
                 )
                 cl = GCSURI.get_gcs_anonymous_client(self._thread_id)
             except NotFound:
