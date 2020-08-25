@@ -148,12 +148,12 @@ optional arguments:
         $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
         ```
 
-        Or import and call `google_auth()`.
+        Or import and call `add_google_app_creds_to_env()`.
         ```python
         import autouri
-        from autouri.gcsuri import google_auth
+        from autouri.gcsuri import add_google_app_creds_to_env
 
-        google_auth('YOUR_JSON_KEY.json')
+        add_google_app_creds_to_env('YOUR_JSON_KEY.json')
         ```
     Then set your default project.
     ```

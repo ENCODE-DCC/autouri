@@ -34,9 +34,11 @@ logger = logging.getLogger(__name__)
 ENV_VAR_GOOGLE_APPLICATION_CREDENTIALS = "GOOGLE_APPLICATION_CREDENTIALS"
 
 
-def google_auth(service_account_key_file):
+def add_google_app_creds_to_env(service_account_key_file):
     """Google auth with a service account.
-    To globally use the key file for all GCS Client() with different thread IDs.
+    To globally use the key file for all GCS Client() with different thread IDs,
+    update environment variable `GOOGLE_APPLICATION_CREDENTIALS` with a given
+    service account key JSON file.
     """
     service_account_key_file = os.path.abspath(
         os.path.expanduser(service_account_key_file)
@@ -199,35 +201,35 @@ class GCSURI(URIBase):
         )
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        ex, mt, sz, md5 = False, None, None, None
+        exists, mt, sz, md5 = False, None, None, None
 
         try:
             b, _ = self.get_blob()
             # make keys lower-case
-            h = {k.lower(): v for k, v in b._properties.items()}
-            ex = True
+            headers = {k.lower(): v for k, v in b._properties.items()}
+            exists = True
 
             if not skip_md5:
-                if "md5hash" in h:
-                    md5 = parse_md5_str(h["md5hash"])
-                elif "etag" in h:
-                    md5 = parse_md5_str(h["etag"])
+                if "md5hash" in headers:
+                    md5 = parse_md5_str(headers["md5hash"])
+                elif "etag" in headers:
+                    md5 = parse_md5_str(headers["etag"])
                 if md5 is None:
                     # make_md5_file is ignored for GCSURI
                     md5 = self.md5_from_file
 
-            if "size" in h:
-                sz = int(h["size"])
+            if "size" in headers:
+                sz = int(headers["size"])
 
-            if "updated" in h:
-                mt = get_seconds_from_epoch(h["updated"])
-            elif "timecreated" in h:
-                mt = get_seconds_from_epoch(h["timecreated"])
+            if "updated" in headers:
+                mt = get_seconds_from_epoch(headers["updated"])
+            elif "timecreated" in headers:
+                mt = get_seconds_from_epoch(headers["timecreated"])
 
         except Exception:
             logger.debug("Failed to get metadata from {uri}".format(uri=self._uri))
 
-        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
+        return URIMetadata(exists=exists, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         blob, _ = self.get_blob()
