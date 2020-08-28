@@ -315,8 +315,9 @@ def test_gcsuri_get_blob(gcs_v6_txt):
 
     b_new, _ = u_non_existing.get_blob(new=True)
     assert b_new is not None
-    b, _ = u_non_existing.get_blob(new=False)
-    assert b is None
+
+    with pytest.raises(ValueError):
+        u_non_existing.get_blob(new=False)
 
 
 def test_gcsuri_get_bucket_path():

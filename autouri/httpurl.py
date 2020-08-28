@@ -58,7 +58,7 @@ class HTTPURL(URIBase):
         but corresponding URL on a public bucket will still have
         "Last-modified" property which is pointing to creation time.
         """
-        ex, mt, sz, md5 = False, None, None, None
+        exists, mt, sz, md5 = False, None, None, None
         try:
             # get header only
             r = requests.get(
@@ -69,30 +69,30 @@ class HTTPURL(URIBase):
             )
             r.raise_for_status()
             # make keys lower-case
-            h = {k.lower(): v for k, v in r.headers.items()}
-            ex = True
+            headers = {k.lower(): v for k, v in r.headers.items()}
+            exists = True
 
             if not skip_md5:
-                if "content-md5" in h:
-                    md5 = parse_md5_str(h["content-md5"])
-                elif "x-goog-hash" in h:
-                    hashes = h["x-goog-hash"].strip().split(",")
+                if "content-md5" in headers:
+                    md5 = parse_md5_str(headers["content-md5"])
+                elif "x-goog-hash" in headers:
+                    hashes = headers["x-goog-hash"].strip().split(",")
                     for hs in hashes:
                         if hs.strip().startswith("md5="):
                             raw = hs.strip().replace("md5=", "", 1)
                             md5 = parse_md5_str(raw)
-                if md5 is None and "etag" in h:
-                    md5 = parse_md5_str(h["etag"])
+                if md5 is None and "etag" in headers:
+                    md5 = parse_md5_str(headers["etag"])
                 if md5 is None:
                     md5 = self.md5_from_file
 
-            if "content-length" in h:
-                sz = int(h["content-length"])
-            elif "x-goog-stored-content-length" in h:
-                sz = int(h["x-goog-stored-content-length"])
+            if "content-length" in headers:
+                sz = int(headers["content-length"])
+            elif "x-goog-stored-content-length" in headers:
+                sz = int(headers["x-goog-stored-content-length"])
 
-            if "last-modified" in h:
-                mt = get_seconds_from_epoch(h["last-modified"])
+            if "last-modified" in headers:
+                mt = get_seconds_from_epoch(headers["last-modified"])
 
         except requests.exceptions.ConnectionError:
             pass
@@ -101,7 +101,7 @@ class HTTPURL(URIBase):
             if status_code == 403:
                 raise
 
-        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
+        return URIMetadata(exists=exists, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         r = requests.get(

@@ -140,12 +140,20 @@ optional arguments:
 - GCS: Use `gcloud` CLI.
     - Using end-user credentials: You will be asked to enter credentials of your Google account.
         ```
-        $ gcloud init
+        $ gcloud auth application-default login --no-launch-browser
         ```
     - Using service account credentials: If you use a service account and a JSON key file associated with it.
         ```
         $ gcloud auth activate-service-account --key-file=[YOUR_JSON_KEY.json]
         $ GOOGLE_APPLICATION_CREDENTIALS="PATH/FOR/YOUR_JSON_KEY.json"
+        ```
+
+        Or import and call `add_google_app_creds_to_env()`.
+        ```python
+        import autouri
+        from autouri.gcsuri import add_google_app_creds_to_env
+
+        add_google_app_creds_to_env('YOUR_JSON_KEY.json')
         ```
     Then set your default project.
     ```
