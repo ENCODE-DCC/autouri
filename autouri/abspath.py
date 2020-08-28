@@ -75,9 +75,9 @@ class AbsPath(URIBase):
     def get_metadata(self, skip_md5=False, make_md5_file=False):
         """If md5 file doesn't exist then use hashlib.md5() to calculate md5 hash
         """
-        ex = os.path.exists(self._uri)
+        exists = os.path.exists(self._uri)
         mt, sz, md5 = None, None, None
-        if ex:
+        if exists:
             mt = os.path.getmtime(self._uri)
             sz = os.path.getsize(self._uri)
             if not skip_md5:
@@ -87,7 +87,7 @@ class AbsPath(URIBase):
                 if make_md5_file:
                     self.md5_file_uri.write(md5)
 
-        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
+        return URIMetadata(exists=exists, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         if byte:

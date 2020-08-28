@@ -77,7 +77,7 @@ class S3URI(URIBase):
             Duration for presigned URLs in seconds.
 
     Protected class constants:
-        _CACHED_BOTO3_CLIENT_PER_THREAD:
+        _CACHED_BOTO3_CLIENTS:
         _CACHED_PRESIGNED_URLS:
         _S3_PUBLIC_URL_FORMAT:
             End point for a bucket with public access + key path
@@ -85,7 +85,7 @@ class S3URI(URIBase):
 
     DURATION_PRESIGNED_URL: int = 4233600
 
-    _CACHED_BOTO3_CLIENT_PER_THREAD = {}
+    _CACHED_BOTO3_CLIENTS = {}
     _CACHED_PRESIGNED_URLS = {}
     _S3_PUBLIC_URL_FORMAT = "http://{bucket}.s3.amazonaws.com/{path}"
 
@@ -107,7 +107,7 @@ class S3URI(URIBase):
         )
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        ex, mt, sz, md5 = False, None, None, None
+        exists, mt, sz, md5 = False, None, None, None
 
         cl = S3URI.get_boto3_client(self._thread_id)
         bucket, path = self.get_bucket_path()
@@ -117,28 +117,28 @@ class S3URI(URIBase):
                 "HTTPHeaders"
             ]
             # make keys lower-case
-            h = {k.lower(): v for k, v in m.items()}
-            ex = True
+            headers = {k.lower(): v for k, v in m.items()}
+            exists = True
 
             if not skip_md5:
-                if "content-md5" in h:
-                    md5 = parse_md5_str(h["content-md5"])
-                elif "etag" in h:
-                    md5 = parse_md5_str(h["etag"])
+                if "content-md5" in headers:
+                    md5 = parse_md5_str(headers["content-md5"])
+                elif "etag" in headers:
+                    md5 = parse_md5_str(headers["etag"])
                 if md5 is None:
                     # make_md5_file is ignored for S3URI
                     md5 = self.md5_from_file
 
-            if "content-length" in h:
-                sz = int(h["content-length"])
+            if "content-length" in headers:
+                sz = int(headers["content-length"])
 
-            if "last-modified" in h:
-                mt = get_seconds_from_epoch(h["last-modified"])
+            if "last-modified" in headers:
+                mt = get_seconds_from_epoch(headers["last-modified"])
 
         except Exception:
             pass
 
-        return URIMetadata(exists=ex, mtime=mt, size=sz, md5=md5)
+        return URIMetadata(exists=exists, mtime=mt, size=sz, md5=md5)
 
     def read(self, byte=False):
         cl = S3URI.get_boto3_client(self._thread_id)
@@ -278,11 +278,11 @@ class S3URI(URIBase):
 
     @staticmethod
     def get_boto3_client(thread_id=-1) -> client:
-        if thread_id in S3URI._CACHED_BOTO3_CLIENT_PER_THREAD:
-            return S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id]
+        if thread_id in S3URI._CACHED_BOTO3_CLIENTS:
+            return S3URI._CACHED_BOTO3_CLIENTS[thread_id]
         else:
             cl = client("s3")
-            S3URI._CACHED_BOTO3_CLIENT_PER_THREAD[thread_id] = cl
+            S3URI._CACHED_BOTO3_CLIENTS[thread_id] = cl
             return cl
 
     @staticmethod
