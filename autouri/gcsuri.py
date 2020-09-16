@@ -99,15 +99,27 @@ class GCSURILock(BaseFileLock):
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
+        """Try to acquire a lock.
+        Once successfuly acquired, lock the .lock file temporarily using
+        blob.temporary_hold (similary to `gsutil retention temp set URI`).
+        This will be released in self._release().
+
+        Need to distinguish between two Forbidden errors.
+        - Lack of write permission: should raise.
+        - Temporary hold (retention temp) enabled: should not raise and should retry.
+        """
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
         try:
-            blob, bucket_obj = u.get_blob(new=True)
-            if blob.temporary_hold:
-                return
+            blob, _ = u.get_blob(new=True)
             blob.upload_from_string("")
             blob.temporary_hold = True
             blob.patch()
             self._lock_file_fd = id(self)
+        except Forbidden:
+            # Get another blob to check temp hold.
+            blob_to_check_hold, _ = u.get_blob(new=True)
+            if not blob_to_check_hold.temporary_hold:
+                raise
         except (GatewayTimeout, NotFound, ServiceUnavailable) as e:
             logger.debug(
                 "Failed to acquire a file lock. "
