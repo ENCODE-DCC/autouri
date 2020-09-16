@@ -103,6 +103,8 @@ class GCSURILock(BaseFileLock):
         try:
             blob, bucket_obj = u.get_blob(new=True)
             blob.upload_from_string("")
+            if blob.temporary_hold:
+                return
             blob.temporary_hold = True
             blob.patch()
             self._lock_file_fd = id(self)
@@ -112,8 +114,6 @@ class GCSURILock(BaseFileLock):
                 "Retrying until timeout. "
                 "Error: {err}".format(err=str(e))
             )
-
-        return None
 
     def _release(self):
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
@@ -140,7 +140,6 @@ class GCSURILock(BaseFileLock):
                 logger.error(error_msg)
 
             time.sleep(self._retry_release_interval)
-        return None
 
 
 class GCSURI(URIBase):
