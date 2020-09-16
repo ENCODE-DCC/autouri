@@ -106,8 +106,12 @@ class GCSURILock(BaseFileLock):
             blob.temporary_hold = True
             blob.patch()
             self._lock_file_fd = id(self)
-        except (Forbidden, GatewayTimeout, NotFound, ServiceUnavailable):
-            pass
+        except (GatewayTimeout, NotFound, ServiceUnavailable) as e:
+            logger.debug(
+                "Failed to acquire a file lock. "
+                "Retrying until timeout. "
+                "Error: {err}".format(err=str(e))
+            )
 
         return None
 
