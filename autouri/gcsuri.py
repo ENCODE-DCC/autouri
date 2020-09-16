@@ -102,9 +102,9 @@ class GCSURILock(BaseFileLock):
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
         try:
             blob, bucket_obj = u.get_blob(new=True)
-            blob.upload_from_string("")
             if blob.temporary_hold:
                 return
+            blob.upload_from_string("")
             blob.temporary_hold = True
             blob.patch()
             self._lock_file_fd = id(self)
