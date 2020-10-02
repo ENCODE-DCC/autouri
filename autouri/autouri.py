@@ -13,12 +13,12 @@ from .metadata import URIMetadata
 logger = logging.getLogger(__name__)
 
 
-def autouri_rm(uri, thread_id):
+def autouri_rm(uri, thread_id, no_lock=False):
     """Wrapper for AutoURI(uri).rm().
     This function is used for multiprocessing.map() which requires a picklable function
     outside the scope of the class.
     """
-    AutoURI(uri, thread_id=thread_id).rm()
+    AutoURI(uri, thread_id=thread_id).rm(no_lock=no_lock)
 
 
 class AutoURIRecursionError(RuntimeError):
@@ -370,8 +370,9 @@ class URIBase(ABC):
             return
         num_files = len(files)
         thread_ids = [i % num_threads for i in range(num_files)]
+        no_locks = [no_lock] * num_files
 
-        args = list(zip(files, thread_ids))
+        args = list(zip(files, thread_ids, num_files, no_locks))
         with multiprocessing.Pool(num_threads) as p:
             p.starmap(autouri_rm, args)
 
