@@ -372,7 +372,7 @@ class URIBase(ABC):
         thread_ids = [i % num_threads for i in range(num_files)]
         no_locks = [no_lock] * num_files
 
-        args = list(zip(files, thread_ids, num_files, no_locks))
+        args = list(zip(files, thread_ids, no_locks))
         with multiprocessing.Pool(num_threads) as p:
             p.starmap(autouri_rm, args)
 
@@ -393,6 +393,7 @@ class URIBase(ABC):
         make_md5_file=False,
         return_flag=False,
         depth=0,
+        no_lock=False,
     ) -> Tuple[str, bool]:
         """Wrapper for classmethod localize().
         Localizes self on target directory loc_prefix.
@@ -404,6 +405,7 @@ class URIBase(ABC):
             loc_prefix=loc_prefix,
             return_flag=return_flag,
             depth=depth,
+            no_lock=no_lock,
         )
 
     @abstractmethod
@@ -518,6 +520,7 @@ class URIBase(ABC):
         loc_prefix=None,
         return_flag=False,
         depth=0,
+        no_lock=False,
     ) -> Tuple[str, bool]:
         """Localize a source URI on this URI class (cls).
 
@@ -548,6 +551,8 @@ class URIBase(ABC):
                     See "Returns" section for details about flag
             depth:
                 To count recursion depth.
+            no_lock:
+                No file locking.
         Returns:
             loc_uri:
                 Localized URI STRING (not a AutoURI instance) since it should be used
@@ -603,6 +608,7 @@ class URIBase(ABC):
                     loc_prefix=loc_prefix,
                     return_flag=True,
                     depth=depth + 1,
+                    no_lock=no_lock,
                 )
 
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
@@ -619,14 +625,14 @@ class URIBase(ABC):
             basename = src_uri.basename_wo_ext + cls.get_loc_suffix() + src_uri.ext
             dirname = src_uri.loc_dirname
             loc_uri = cls.get_path_sep().join([loc_prefix, dirname, basename])
-            AutoURI(loc_uri).write(maybe_modified_contents)
+            AutoURI(loc_uri).write(maybe_modified_contents, no_lock=no_lock)
 
         elif on_different_storage:
             basename = src_uri.basename
             dirname = src_uri.loc_dirname
 
             loc_uri = cls.get_path_sep().join([loc_prefix, dirname, basename])
-            src_uri.cp(dest_uri=loc_uri, make_md5_file=make_md5_file)
+            src_uri.cp(dest_uri=loc_uri, make_md5_file=make_md5_file, no_lock=no_lock)
         else:
             loc_uri = src_uri._uri
 

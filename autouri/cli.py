@@ -29,6 +29,11 @@ def parse_args():
     parent_src = argparse.ArgumentParser(add_help=False)
     parent_src.add_argument("src", help="Source file URI")
 
+    parent_lock = argparse.ArgumentParser(add_help=False)
+    parent_lock.add_argument(
+        "--no-lock", action="store_true", help="No file locking for write/rm action."
+    )
+
     parent_target = argparse.ArgumentParser(add_help=False)
     parent_target.add_argument(
         "target",
@@ -68,7 +73,7 @@ def parse_args():
         "target must be a full filename/directory. "
         "Target directory must have a trailing directory separator "
         "(e.g. /)",
-        parents=[parent_src, parent_target, parent_cp, parent_all],
+        parents=[parent_src, parent_lock, parent_target, parent_cp, parent_all],
     )
     subparser.add_parser(
         "find",
@@ -86,19 +91,21 @@ def parse_args():
     p_write = subparser.add_parser(
         "write",
         help="AutoURI(src).write(text): Write text on source.",
-        parents=[parent_src, parent_all],
+        parents=[parent_src, parent_lock, parent_all],
     )
     p_write.add_argument("text", help="Text to be written to source file.")
 
     subparser.add_parser(
-        "rm", help="AutoURI(src).rm(): Delete source.", parents=[parent_src, parent_all]
+        "rm",
+        help="AutoURI(src).rm(): Delete source.",
+        parents=[parent_src, parent_lock, parent_all],
     )
 
     p_rmdir = subparser.add_parser(
         "rmdir",
         help="AutoURI(src).rmdir(): Recursively delete all files on "
         "source directory.",
-        parents=[parent_src, parent_all],
+        parents=[parent_src, parent_lock, parent_all],
     )
     p_rmdir.add_argument("--delete", action="store_true", help="DELETE outputs.")
     p_rmdir.add_argument(
@@ -114,7 +121,7 @@ def parse_args():
         "loc",
         help="AutoURI(src).localize_on(target): Localize source on target directory "
         "Target directory must end with directory separator",
-        parents=[parent_src, parent_target, parent_cp, parent_all],
+        parents=[parent_src, parent_target, parent_cp, parent_lock, parent_all],
     )
     p_loc.add_argument(
         "--recursive",
@@ -185,7 +192,12 @@ def main():
 
     elif args.action == "cp":
         u_src = AutoURI(src)
-        _, flag = u_src.cp(target, make_md5_file=args.make_md5_file, return_flag=True)
+        _, flag = u_src.cp(
+            target,
+            make_md5_file=args.make_md5_file,
+            return_flag=True,
+            no_lock=args.no_lock,
+        )
 
         if flag == 0:
             logger.info("Copying from file {s} to {t} done".format(s=src, t=target))
@@ -210,18 +222,20 @@ def main():
             print(uri)
 
     elif args.action == "write":
-        AutoURI(src).write(args.text)
+        AutoURI(src).write(args.text, no_lock=args.no_lock)
         logger.info("Text has been written to {s}".format(s=src))
 
     elif args.action == "rm":
         u = AutoURI(src)
         if not u.exists:
             raise ValueError("File does not exist. {s}".format(s=src))
-        u.rm()
+        u.rm(no_lock=args.no_lock)
         logger.info("Deleted {s}".format(s=src))
 
     elif args.action == "rmdir":
-        AutoURI(src).rmdir(dry_run=not args.delete, num_threads=args.num_threads)
+        AutoURI(src).rmdir(
+            dry_run=not args.delete, num_threads=args.num_threads, no_lock=args.no_lock
+        )
         if not args.delete:
             logger.warning(
                 "rmdir ran in a dry-run mode. "
@@ -234,6 +248,7 @@ def main():
             recursive=args.recursive,
             make_md5_file=args.make_md5_file,
             return_flag=True,
+            no_lock=args.no_lock,
         )
         if localized:
             logger.info("Localized {s} on {t}".format(s=src, t=target))
