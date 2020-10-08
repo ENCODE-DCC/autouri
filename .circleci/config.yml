@@ -111,9 +111,9 @@ jobs:
 
             # clean up
             rm -f tmp_key.json
-            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID}
-            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID}
-            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID} || true
+            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID} || true
+            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID} || true
 
 
 # Define workflow here
