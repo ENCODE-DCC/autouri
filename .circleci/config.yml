@@ -10,7 +10,7 @@ defaults:
 
 machine_defaults: &machine_defaults
   machine:
-    image: ubuntu-1604:201903-01
+    image: ubuntu-1604:202007-01
   working_directory: ~/autouri
 
 
@@ -41,7 +41,7 @@ install_precommit: &install_precommit
 install_py3_packages: &install_py3_packages
   name: Install Python packages
   command: |
-    sudo pip3 install pytest requests dateparser filelock
+    sudo pip3 install pytest requests dateparser filelock "six>=1.13.0"
     sudo pip3 install --upgrade pyasn1-modules
 
 
@@ -111,9 +111,9 @@ jobs:
 
             # clean up
             rm -f tmp_key.json
-            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID}
-            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID}
-            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID}
+            gsutil -m rm -rf ${S3_ROOT}/${CIRCLE_WORKFLOW_ID} || true
+            gsutil -m rm -rf ${GCS_ROOT}/${CIRCLE_WORKFLOW_ID} || true
+            gsutil -m rm -rf ${GCS_ROOT_URL}/${CIRCLE_WORKFLOW_ID} || true
 
 
 # Define workflow here
