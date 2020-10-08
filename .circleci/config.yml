@@ -41,7 +41,7 @@ install_precommit: &install_precommit
 install_py3_packages: &install_py3_packages
   name: Install Python packages
   command: |
-    sudo pip3 install pytest requests dateparser filelock
+    sudo pip3 install pytest requests dateparser filelock "six>=1.13.0"
     sudo pip3 install --upgrade pyasn1-modules
 
 

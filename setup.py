@@ -28,5 +28,6 @@ setuptools.setup(
         "awscli",
         "dateparser",
         "filelock",
+        "six>=1.13.0",
     ],
 )
