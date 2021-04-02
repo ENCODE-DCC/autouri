@@ -394,6 +394,7 @@ class URIBase(ABC):
         return_flag=False,
         depth=0,
         no_lock=False,
+        no_checksum=False,
     ) -> Tuple[str, bool]:
         """Wrapper for classmethod localize().
         Localizes self on target directory loc_prefix.
@@ -406,6 +407,7 @@ class URIBase(ABC):
             return_flag=return_flag,
             depth=depth,
             no_lock=no_lock,
+            no_checksum=no_checksum,
         )
 
     @abstractmethod
@@ -521,6 +523,7 @@ class URIBase(ABC):
         return_flag=False,
         depth=0,
         no_lock=False,
+        no_checksum=False,
     ) -> Tuple[str, bool]:
         """Localize a source URI on this URI class (cls).
 
@@ -553,6 +556,8 @@ class URIBase(ABC):
                 To count recursion depth.
             no_lock:
                 No file locking.
+            no_checksum:
+                Do not check md5 hash.
         Returns:
             loc_uri:
                 Localized URI STRING (not a AutoURI instance) since it should be used
@@ -609,6 +614,7 @@ class URIBase(ABC):
                     return_flag=True,
                     depth=depth + 1,
                     no_lock=no_lock,
+                    no_checksum=no_checksum,
                 )
 
             for ext, fnc_recurse in AutoURI.LOC_RECURSE_EXT_AND_FNC.items():
@@ -632,7 +638,12 @@ class URIBase(ABC):
             dirname = src_uri.loc_dirname
 
             loc_uri = cls.get_path_sep().join([loc_prefix, dirname, basename])
-            src_uri.cp(dest_uri=loc_uri, make_md5_file=make_md5_file, no_lock=no_lock)
+            src_uri.cp(
+                dest_uri=loc_uri,
+                make_md5_file=make_md5_file,
+                no_lock=no_lock,
+                no_checksum=no_checksum,
+            )
         else:
             loc_uri = src_uri._uri
 
