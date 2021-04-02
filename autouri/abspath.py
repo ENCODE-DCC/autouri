@@ -196,10 +196,17 @@ class AbsPath(URIBase):
     def __calc_md5sum(self):
         """Expensive md5 calculation
         """
+        logger.debug(
+            "calculating md5sum hash of local file: {file}".format(file=self._uri)
+        )
         hash_md5 = hashlib.md5()
         with open(self._uri, "rb") as fp:
             for chunk in iter(lambda: fp.read(AbsPath.MD5_CALC_CHUNK_SIZE), b""):
                 hash_md5.update(chunk)
+
+        logger.debug(
+            "calculating md5sum is done for local file: {file}".format(file=self._uri)
+        )
         return hash_md5.hexdigest()
 
     @staticmethod
