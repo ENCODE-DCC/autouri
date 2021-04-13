@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="autouri",
-    version="0.2.4",
+    version="0.2.5",
     python_requires=">=3.6",
     scripts=["bin/autouri"],
     author="Jin wook Lee",
