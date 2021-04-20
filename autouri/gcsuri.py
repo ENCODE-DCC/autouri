@@ -14,6 +14,7 @@ from typing import Optional, Tuple
 
 import requests
 from filelock import BaseFileLock
+from filelock import Timeout as FileLockTimeout
 from google.api_core.exceptions import (
     Forbidden,
     GatewayTimeout,
@@ -98,7 +99,20 @@ class GCSURILock(BaseFileLock):
     def acquire(self, timeout=None, poll_intervall=5.0):
         """Use self._poll_interval instead of poll_intervall in args
         """
-        super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+        try:
+            super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+        except FileLockTimeout:
+            logger.error(
+                "Filelock timed out. Is there any other process holding the file? "
+                "Or this can happen when autouri was forcefully killed while holding a file. "
+                "e.g. pressing Ctrl+C two many times or killed by the system with SIGKILL. "
+                "If there is no other process holding the file "
+                "then please manually release/delete the lock file with gsutil. "
+                "Use the following command lines to delete the lock file.\n\n"
+                "gsutil retention temp release {lock_file}\n"
+                "gsutil rm {lock_file}\n".format(lock_file=self._lock_file)
+            )
+            raise
 
     def _acquire(self):
         """Try to acquire a lock.
