@@ -345,12 +345,13 @@ class URIBase(ABC):
             self._write(s)
         return
 
-    def rm(self, no_lock=False):
+    def rm(self, no_lock=False, silent=False):
         """Remove a URI from its storage. It is protected by by a locking mechanism.
         """
         with self.get_lock(no_lock=no_lock):
             self._rm()
-            logger.info("rm: {uri}".format(uri=self._uri))
+            if not silent:
+                logger.info("rm: {uri}".format(uri=self._uri))
         return
 
     def rmdir(self, dry_run=False, num_threads=DEFAULT_NUM_THREADS, no_lock=False):

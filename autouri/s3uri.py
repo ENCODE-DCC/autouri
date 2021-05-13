@@ -61,7 +61,7 @@ class S3URILock(BaseFileLock):
     def _release(self):
         u = S3URI(self._lock_file)
         try:
-            u.rm(no_lock=True)
+            u.rm(no_lock=True, silent=True)
             self._lock_file_fd = None
         except ClientError:
             pass
