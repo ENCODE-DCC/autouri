@@ -14,10 +14,6 @@ from .metadata import URIMetadata
 logger = logging.getLogger(__name__)
 
 
-def short_uuid():
-    return str(uuid.uuid4())[:8]
-
-
 def autouri_rm(uri, thread_id, no_lock=False):
     """Wrapper for AutoURI(uri).rm().
     This function is used for multiprocessing.map() which requires a picklable function
@@ -98,6 +94,7 @@ class URIBase(ABC):
         else:
             self._uri = uri
         self._thread_id = thread_id
+        self._uuid = str(uuid.uuid4())
 
     def __repr__(self):
         return self._uri
@@ -115,6 +112,14 @@ class URIBase(ABC):
     @thread_id.setter
     def thread_id(self, i):
         self._thread_id = i
+
+    @property
+    def uuid(self):
+        return self._uuid
+
+    @property
+    def short_uuid(self):
+        return self._uuid[:8]
 
     @property
     def uri(self) -> Any:
@@ -284,10 +289,9 @@ class URIBase(ABC):
         if d._uri.endswith(sep):
             d = AutoURI(sep.join([d._uri.rstrip(sep), self.basename]))
 
-        short_uuid_for_logging = short_uuid()
         logger.info(
             "cp: ({uuid}) started. src={src}, dest={dest}".format(
-                uuid=short_uuid_for_logging, src=self._uri, dest=d.uri
+                uuid=self.short_uuid, src=self._uri, dest=d.uri
             )
         )
 
@@ -297,7 +301,7 @@ class URIBase(ABC):
                 m_dest = d.get_metadata(make_md5_file=make_md5_file)
                 logger.debug(
                     "cp: ({uuid}) dest metadata={m}, dest={dest}".format(
-                        uuid=short_uuid_for_logging, m=m_dest, dest=d.uri
+                        uuid=self.short_uuid, m=m_dest, dest=d.uri
                     )
                 )
 
@@ -305,7 +309,7 @@ class URIBase(ABC):
                     m_src = self.get_metadata()
                     logger.debug(
                         "cp: ({uuid}) src metadata={m}, src={src}".format(
-                            uuid=short_uuid_for_logging, m=m_src, src=self._uri
+                            uuid=self.short_uuid, m=m_src, src=self._uri
                         )
                     )
 
@@ -317,9 +321,7 @@ class URIBase(ABC):
                     if md5_matched:
                         logger.info(
                             "cp: ({uuid}) skipped due to md5_match. "
-                            "md5={md5}".format(
-                                uuid=short_uuid_for_logging, md5=m_src.md5
-                            )
+                            "md5={md5}".format(uuid=self.short_uuid, md5=m_src.md5)
                         )
                         return (d._uri, 1) if return_flag else d._uri
 
@@ -338,20 +340,16 @@ class URIBase(ABC):
                         logger.info(
                             "cp: ({uuid}) skipped due to name_size_match. "
                             "size={sz}, mt={mt}".format(
-                                uuid=short_uuid_for_logging,
-                                sz=m_src.size,
-                                mt=m_src.mtime,
+                                uuid=self.short_uuid, sz=m_src.size, mt=m_src.mtime
                             )
                         )
                         return (d._uri, 2) if return_flag else d._uri
 
             if not self._cp(dest_uri=d):
                 if not d._cp_from(src_uri=self):
-                    raise Exception(
-                        "cp: ({uuid}) failed.".format(uuid=short_uuid_for_logging)
-                    )
+                    raise Exception("cp: ({uuid}) failed.".format(uuid=self.short_uuid))
 
-        logger.info("cp: ({uuid}) done.".format(uuid=short_uuid_for_logging))
+        logger.info("cp: ({uuid}) done.".format(uuid=self.short_uuid))
         return (d._uri, 0) if return_flag else d._uri
 
     def write(self, s, no_lock=False):
@@ -367,7 +365,9 @@ class URIBase(ABC):
         with self.get_lock(no_lock=no_lock):
             self._rm()
             if not silent:
-                logger.info("rm: {uri}".format(uri=self._uri))
+                logger.info(
+                    "rm: ({uuid}) {uri}".format(uuid=self.short_uuid, uri=self._uri)
+                )
         return
 
     def rmdir(self, dry_run=False, num_threads=DEFAULT_NUM_THREADS, no_lock=False):
@@ -383,7 +383,9 @@ class URIBase(ABC):
         files = self.find_all_files()
         if dry_run:
             for uri in files:
-                logger.info("rm (dry-run): {uri}".format(uri=uri))
+                logger.info(
+                    "rm (dry-run): ({uuid}) {uri}".format(uuid=self.short_uuid, uri=uri)
+                )
             return
         num_files = len(files)
         thread_ids = [i % num_threads for i in range(num_files)]
