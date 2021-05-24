@@ -1,6 +1,7 @@
 import logging
 import multiprocessing
 import os
+import uuid
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
@@ -93,6 +94,7 @@ class URIBase(ABC):
         else:
             self._uri = uri
         self._thread_id = thread_id
+        self._uuid = str(uuid.uuid4())
 
     def __repr__(self):
         return self._uri
@@ -110,6 +112,14 @@ class URIBase(ABC):
     @thread_id.setter
     def thread_id(self, i):
         self._thread_id = i
+
+    @property
+    def uuid(self):
+        return self._uuid
+
+    @property
+    def short_uuid(self):
+        return self._uuid[:8]
 
     @property
     def uri(self) -> Any:
@@ -279,18 +289,28 @@ class URIBase(ABC):
         if d._uri.endswith(sep):
             d = AutoURI(sep.join([d._uri.rstrip(sep), self.basename]))
 
+        logger.info(
+            "cp: ({uuid}) started. src={src}, dest={dest}".format(
+                uuid=self.short_uuid, src=self._uri, dest=d.uri
+            )
+        )
+
         with d.get_lock(no_lock=no_lock):
             if not no_checksum:
                 # checksum (by md5, size, mdate)
                 m_dest = d.get_metadata(make_md5_file=make_md5_file)
                 logger.debug(
-                    "cp: dest metadata={m}, dest={dest}".format(m=m_dest, dest=d.uri)
+                    "cp: ({uuid}) dest metadata={m}, dest={dest}".format(
+                        uuid=self.short_uuid, m=m_dest, dest=d.uri
+                    )
                 )
 
                 if m_dest.exists:
                     m_src = self.get_metadata()
                     logger.debug(
-                        "cp: src metadata={m}, src={src}".format(m=m_src, src=self._uri)
+                        "cp: ({uuid}) src metadata={m}, src={src}".format(
+                            uuid=self.short_uuid, m=m_src, src=self._uri
+                        )
                     )
 
                     md5_matched = (
@@ -300,10 +320,8 @@ class URIBase(ABC):
                     )
                     if md5_matched:
                         logger.info(
-                            "cp: skipped due to md5_match, "
-                            "md5={md5}, src={src}, dest={dest}".format(
-                                md5=m_src.md5, src=self._uri, dest=d.uri
-                            )
+                            "cp: ({uuid}) skipped due to md5_match. "
+                            "md5={md5}".format(uuid=self.short_uuid, md5=m_src.md5)
                         )
                         return (d._uri, 1) if return_flag else d._uri
 
@@ -320,22 +338,18 @@ class URIBase(ABC):
                     )
                     if name_matched and size_matched and src_is_not_newer:
                         logger.info(
-                            "cp: skipped due to name_size_match, "
-                            "size={sz}, mt={mt}, src={src}, dest={dest}".format(
-                                sz=m_src.size, mt=m_src.mtime, src=self._uri, dest=d.uri
+                            "cp: ({uuid}) skipped due to name_size_match. "
+                            "size={sz}, mt={mt}".format(
+                                uuid=self.short_uuid, sz=m_src.size, mt=m_src.mtime
                             )
                         )
                         return (d._uri, 2) if return_flag else d._uri
 
             if not self._cp(dest_uri=d):
                 if not d._cp_from(src_uri=self):
-                    raise Exception(
-                        "cp failed. src: {s} dest: {d}".format(s=str(self), d=str(d))
-                    )
+                    raise Exception("cp: ({uuid}) failed.".format(uuid=self.short_uuid))
 
-        logger.info(
-            "cp: copied, src={src}, dest={dest}".format(src=self._uri, dest=d.uri)
-        )
+        logger.info("cp: ({uuid}) done.".format(uuid=self.short_uuid))
         return (d._uri, 0) if return_flag else d._uri
 
     def write(self, s, no_lock=False):
@@ -345,12 +359,15 @@ class URIBase(ABC):
             self._write(s)
         return
 
-    def rm(self, no_lock=False):
+    def rm(self, no_lock=False, silent=False):
         """Remove a URI from its storage. It is protected by by a locking mechanism.
         """
         with self.get_lock(no_lock=no_lock):
             self._rm()
-            logger.info("rm: {uri}".format(uri=self._uri))
+            if not silent:
+                logger.info(
+                    "rm: ({uuid}) {uri}".format(uuid=self.short_uuid, uri=self._uri)
+                )
         return
 
     def rmdir(self, dry_run=False, num_threads=DEFAULT_NUM_THREADS, no_lock=False):
@@ -366,7 +383,9 @@ class URIBase(ABC):
         files = self.find_all_files()
         if dry_run:
             for uri in files:
-                logger.info("rm (dry-run): {uri}".format(uri=uri))
+                logger.info(
+                    "rm (dry-run): ({uuid}) {uri}".format(uuid=self.short_uuid, uri=uri)
+                )
             return
         num_files = len(files)
         thread_ids = [i % num_threads for i in range(num_files)]

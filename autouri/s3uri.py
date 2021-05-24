@@ -61,7 +61,7 @@ class S3URILock(BaseFileLock):
     def _release(self):
         u = S3URI(self._lock_file)
         try:
-            u.rm(no_lock=True)
+            u.rm(no_lock=True, silent=True)
             self._lock_file_fd = None
         except ClientError:
             pass
@@ -75,6 +75,8 @@ class S3URI(URIBase):
             Path prefix for localization. Inherited from URIBase class.
         DURATION_PRESIGNED_URL:
             Duration for presigned URLs in seconds.
+        S3_COPY_OBJECT_FILE_SIZE_LIMIT:
+            File size limit (in bytes) for S3 copy_object (for s3 to s3 transfer).
 
     Protected class constants:
         _CACHED_BOTO3_CLIENTS:
@@ -84,6 +86,7 @@ class S3URI(URIBase):
     """
 
     DURATION_PRESIGNED_URL: int = 4233600
+    S3_COPY_OBJECT_FILE_SIZE_LIMIT: int = 5 * 1024 * 1024 * 1024
 
     _CACHED_BOTO3_CLIENTS = {}
     _CACHED_PRESIGNED_URLS = {}
@@ -196,7 +199,12 @@ class S3URI(URIBase):
 
         if isinstance(dest_uri, S3URI):
             dest_bucket, dest_path = dest_uri.get_bucket_path()
-            cl.copy_object(
+
+            if self.size >= S3URI.S3_COPY_OBJECT_FILE_SIZE_LIMIT:
+                copy_function = cl.copy
+            else:
+                copy_function = cl.copy_object
+            copy_function(
                 CopySource={"Bucket": bucket, "Key": path},
                 Bucket=dest_bucket,
                 Key=dest_path,
@@ -287,9 +295,13 @@ class S3URI(URIBase):
 
     @staticmethod
     def init_s3uri(
-        loc_prefix: Optional[str] = None, duration_presigned_url: Optional[int] = None
+        loc_prefix: Optional[str] = None,
+        duration_presigned_url: Optional[int] = None,
+        s3_copy_object_file_size_limit: Optional[int] = None,
     ):
         if loc_prefix is not None:
             S3URI.LOC_PREFIX = loc_prefix
         if duration_presigned_url is not None:
             S3URI.DURATION_PRESIGNED_URL = duration_presigned_url
+        if s3_copy_object_file_size_limit is not None:
+            S3URI.S3_COPY_OBJECT_FILE_SIZE_LIMIT = s3_copy_object_file_size_limit
