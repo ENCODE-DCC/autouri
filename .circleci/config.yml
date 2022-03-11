@@ -87,7 +87,6 @@ jobs:
           no_output_timeout: 60m
           command: |
             cd tests/
-            # sign in
             echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
             gcloud auth activate-service-account --project=${GOOGLE_PROJECT_ID} --key-file=tmp_key.json
             gcloud config set project ${GOOGLE_PROJECT_ID}
