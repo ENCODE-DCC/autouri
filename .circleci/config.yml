@@ -33,19 +33,12 @@ install_shellcheck: &install_shellcheck
     curl -Ls https://github.com/koalaman/shellcheck/releases/download/stable/shellcheck-stable.linux.x86_64.tar.xz | tar xJ && sudo mv shellcheck-stable/shellcheck /usr/local/bin/
 
 
-install_precommit: &install_precommit
-  name: Install Python pre-commit
-  command: |
-    sudo pip3 install PyYAML --ignore-installed
-    sudo pip3 install pre-commit
-
-
 install_py3_packages: &install_py3_packages
   name: Install Python packages
   command: |
     sudo python3 -m pip install --upgrade pip
     sudo pip3 install PyYAML --ignore-installed
-    sudo pip3 install pytest requests dateparser filelock six ntplib
+    sudo pip3 install pre-commit pytest requests dateparser filelock six ntplib
 
 
 install_gcs_lib: &install_gcs_lib
@@ -76,7 +69,7 @@ jobs:
     steps:
       - checkout
       - run: *install_python3
-      - run: *install_precommit
+      - run: *install_py3_packages
       - run: *install_shellcheck
       - run:
           no_output_timeout: 10m
