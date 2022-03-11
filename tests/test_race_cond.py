@@ -67,7 +67,7 @@ def test_race_cond_autouri_write_local(local_test_path):
 
 def test_race_cond_autouri_write_gcs(gcs_test_path):
     prefix = os.path.join(gcs_test_path, "test_race_cond_autouri_write_gcs")
-    nth = 15
+    nth = 10
     run_write_v6_txt(prefix, nth)
 
 
