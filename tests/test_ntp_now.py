@@ -8,6 +8,7 @@ from autouri.ntp_now import get_cached_offset, now_utc, reset_cached_offset
 
 def test_now_utc():
     reset_cached_offset()
+
     assert abs((now_utc() - datetime.now(timezone.utc)).total_seconds()) < 0.01
 
 
@@ -18,11 +19,13 @@ class MockedDataTime(datetime):
 
 
 def test_now_utc_wrong_os_time():
-    reset_cached_offset()
+    correct_now = datetime.now(timezone.utc)
 
     with patch("autouri.ntp_now.datetime", MockedDataTime):
+        reset_cached_offset()
+
         # should be accurate even though system time is 25 second behind NTP server time
-        assert abs((now_utc() - datetime.now(timezone.utc)).total_seconds()) < 0.01
+        assert abs((now_utc() - correct_now).total_seconds()) < 0.01
 
         # cache offset should be 25 second
         cached_offset_in_seconds = get_cached_offset().total_seconds()
