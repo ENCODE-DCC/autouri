@@ -53,7 +53,8 @@ install_gcs_lib: &install_gcs_lib
 install_aws_lib: &install_aws_lib
   name: Install AWS Python API (boto3) and CLI (awscli)
   command: |
-    sudo pip3 install boto3 awscli --user
+    sudo pip3 install awscli --user
+    sudo pip3 install boto3
 
 
 make_root_only_dir: &make_root_only_dir
