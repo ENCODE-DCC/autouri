@@ -29,6 +29,7 @@ from google.oauth2.service_account import Credentials
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -75,10 +76,15 @@ class GCSURILock(BaseFileLock):
             Retry if release (deletion) of a lock file fails.
         DEFAULT_RETRY_RELEASE_INTERVAL:
             Interval for retrial in seconds.
+        DEFAULT_LOCK_FILE_EXPIRATION_SEC:
+            Expiration time of a lock file in seconds.
+            If a lock file is older than this then it is released from hold
+            (based on GCS's temporary hold) and then deleted.
     """
 
     DEFAULT_RETRY_RELEASE = 3
     DEFAULT_RETRY_RELEASE_INTERVAL = 3
+    DEFAULT_LOCK_FILE_EXPIRATION_SEC = 3600
 
     def __init__(
         self,
@@ -88,6 +94,7 @@ class GCSURILock(BaseFileLock):
         poll_interval=10.0,
         retry_release=DEFAULT_RETRY_RELEASE,
         retry_release_interval=DEFAULT_RETRY_RELEASE_INTERVAL,
+        lockfile_expiration_sec=DEFAULT_LOCK_FILE_EXPIRATION_SEC,
         no_lock=False,
     ):
         super().__init__(lock_file, timeout=timeout)
@@ -95,6 +102,7 @@ class GCSURILock(BaseFileLock):
         self._thread_id = thread_id
         self._retry_release = retry_release
         self._retry_release_interval = retry_release_interval
+        self._lockfile_expiration_sec = lockfile_expiration_sec
 
     def acquire(self, timeout=None, poll_intervall=5.0):
         """Use self._poll_interval instead of poll_intervall in args
@@ -125,6 +133,24 @@ class GCSURILock(BaseFileLock):
         """
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
         try:
+            metadata = u.get_metadata()
+
+            if metadata.exists:
+                blob, _ = u.get_blob()
+
+                # if lock file already exists then check if it's expired
+                if now_utc().timestamp > metadata.mt + self._lockfile_expiration_sec:
+                    logger.debug(
+                        "Lock file expired. so will be released and then deleted."
+                    )
+
+                    if blob.temporary_hold:
+                        blob.temporary_hold = False
+                        blob.patch()
+
+                    blob.delete()
+                else:
+                    return
             blob, _ = u.get_blob(new=True)
             blob.upload_from_string("")
             blob.temporary_hold = True
