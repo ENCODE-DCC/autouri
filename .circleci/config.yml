@@ -22,9 +22,9 @@ update_apt:
 
 
 install_python3: &install_python3
-  name: Install python3, pip3, java
+  name: Install python3, pip3
   command: |
-    sudo apt-get install -y software-properties-common git wget curl python3 python3-pip default-jre
+    sudo apt-get install -y software-properties-common git wget curl python3 python3-pip
 
 
 install_shellcheck: &install_shellcheck
