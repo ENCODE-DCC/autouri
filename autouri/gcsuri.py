@@ -136,21 +136,16 @@ class GCSURILock(BaseFileLock):
             metadata = u.get_metadata()
 
             if metadata.exists:
-                blob, _ = u.get_blob()
-
                 # if lock file already exists then check if it's expired
                 if (
                     now_utc().timestamp()
                     > metadata.mtime + self._lockfile_expiration_sec
                 ):
-                    logger.debug(
-                        "Lock file expired. so will be released and then deleted."
-                    )
-
+                    logger.debug("Found expired lock file, will release/delete it.")
+                    blob, _ = u.get_blob()
                     if blob.temporary_hold:
                         blob.temporary_hold = False
                         blob.patch()
-
                     blob.delete()
                 else:
                     return
@@ -242,7 +237,7 @@ class GCSURI(URIBase):
     DURATION_PRESIGNED_URL: int = 4233600
 
     RETRY_BUCKET: int = 3
-    RETRY_BUCKET_DELAY: int = 1
+    RETRY_BUCKET_DELAY: int = 3
     USE_GSUTIL_FOR_S3: bool = False
 
     _CACHED_GCS_CLIENTS = {}
