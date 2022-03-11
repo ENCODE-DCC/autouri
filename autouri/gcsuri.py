@@ -139,7 +139,7 @@ class GCSURILock(BaseFileLock):
                 blob, _ = u.get_blob()
 
                 # if lock file already exists then check if it's expired
-                if now_utc().timestamp > metadata.mt + self._lockfile_expiration_sec:
+                if now_utc().timestamp > metadata.mtime + self._lockfile_expiration_sec:
                     logger.debug(
                         "Lock file expired. so will be released and then deleted."
                     )
