@@ -61,5 +61,6 @@ setuptools.setup(
         "dateparser",
         "filelock",
         "six>=1.13.0",
+        "ntplib",
     ],
 )
