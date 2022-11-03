@@ -17,19 +17,19 @@ from .files import (
 
 
 @pytest.mark.parametrize("path,converted", [
-    ("/asdfasf/sdaf/", "/asdfasf/sdaf/")
-    ("LICENSE", "LICENSE")
-    ("setup.py", "setup.py")
-    ("setup.py.", "setup.py.")
-    ("license", "license")
-    ("does-not-exist.json", "does-not-exist.json")
-    ("~/sadfsf", "~/sadfsf")
-    ("/etc/passwd", "/etc/passwd")
-    ("conftest.py", os.getcwd() + "/conftest.py")
-    ("files.py", os.getcwd() + "/conftest.py")
+    ("/asdfasf/sdaf/", "/asdfasf/sdaf/"),
+    ("LICENSE", "LICENSE"),
+    ("setup.py", "setup.py"),
+    ("setup.py.", "setup.py."),
+    ("license", "license"),
+    ("does-not-exist.json", "does-not-exist.json"),
+    ("~/sadfsf", "~/sadfsf"),
+    ("/etc/passwd", "/etc/passwd"),
+    ("conftest.py", os.getcwd() + "/conftest.py"),
+    ("files.py", os.getcwd() + "/files.py")
 ])
-def test_convert_relpath_to_abspath_if_valid(path) -> Any:
-    assert convert_relpath_to_abspath_if_valid(uri, allowed_exts=(".py")) == converted
+def test_convert_relpath_to_abspath_if_valid(path, converted) -> Any:
+    assert convert_relpath_to_abspath_if_valid(path, allowed_exts=(".py")) == converted
 
 
 @pytest.mark.parametrize("path", common_paths())
