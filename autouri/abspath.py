@@ -61,7 +61,7 @@ class AbsPath(URIBase):
         if isinstance(uri, str):
             uri = os.path.expanduser(uri)
 
-        uri = convert_relpath_to_abspath_if_valid_and_exists(uri)
+        uri = convert_relpath_to_abspath_if_valid(uri)
 
         super().__init__(uri, thread_id=thread_id)
 
