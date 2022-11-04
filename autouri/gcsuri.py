@@ -21,6 +21,7 @@ from google.api_core.exceptions import (
     NotFound,
     PermissionDenied,
     ServiceUnavailable,
+    TooManyRequests,
 )
 from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
@@ -169,10 +170,17 @@ class GCSURILock(BaseFileLock):
             logger.debug(
                 "Failed to acquire a file lock. "
                 "Server is unavailable or busy? "
-                "Or too many requests? "
                 "Retrying until timeout. "
                 "{err}".format(err=str(e))
             )
+        except TooManyRequests as e:
+            logger.debug(
+                "Failed to acquire a file lock. "
+                "Too many requests. Will wait for a while."
+                "And then retrying until timeout. "
+                "{err}".format(err=str(e))
+            )
+            time.sleep(self._retry_release_interval)
 
     def _release(self):
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
