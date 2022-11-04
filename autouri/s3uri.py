@@ -35,9 +35,9 @@ class S3URILock(BaseFileLock):
         self._poll_interval = poll_interval
         self._lock_read_delay = self._poll_interval / 10.0
 
-    def acquire(self, timeout=None, poll_intervall=5.0):
-        """To use self._poll_interval instead of poll_intervall in args."""
-        super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+    def acquire(self, timeout=None, poll_interval=5.0):
+        """To use self._poll_interval instead of poll_interval in args."""
+        super().acquire(timeout=timeout, poll_interval=self._poll_interval)
 
     def _acquire(self):
         """Unlike GCSURI, this module does not use S3 Object locking.

@@ -104,10 +104,10 @@ class GCSURILock(BaseFileLock):
         self._retry_release_interval = retry_release_interval
         self._lockfile_expiration_sec = lockfile_expiration_sec
 
-    def acquire(self, timeout=None, poll_intervall=5.0):
-        """Use self._poll_interval instead of poll_intervall in args"""
+    def acquire(self, timeout=None, poll_interval=5.0):
+        """Use self._poll_interval instead of poll_interval in args"""
         try:
-            super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+            super().acquire(timeout=timeout, poll_interval=self._poll_interval)
         except FileLockTimeout:
             logger.error(
                 "Filelock timed out. Is there any other process holding the file? "
