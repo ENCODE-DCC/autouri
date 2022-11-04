@@ -59,7 +59,7 @@ setuptools.setup(
         "boto3",
         "awscli",
         "dateparser",
-        "filelock",
+        "filelock>=3.4.0",
         "six>=1.13.0",
         "ntplib",
     ],

@@ -39,6 +39,7 @@ install_py3_packages: &install_py3_packages
     python3 -m pip install --upgrade pip
     pip3 install PyYAML --ignore-installed
     pip3 install pre-commit pytest requests dateparser filelock six ntplib
+    pip3 install filelock --upgrade
 
 
 install_gcs_lib: &install_gcs_lib
