@@ -132,7 +132,7 @@ class HTTPURL(URIBase):
 
     def _cp(self, dest_uri):
         """Copy from HTTPURL to
-            AbsPath
+        AbsPath
         """
         from autouri.abspath import AbsPath
 

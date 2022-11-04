@@ -34,8 +34,7 @@ def test_s3uri_uri_wo_scheme(path) -> str:
 
 @pytest.mark.parametrize("path", common_paths())
 def test_s3uri_is_valid(path) -> bool:
-    """Also tests AutoURI auto-conversion since it's based on is_valid property
-    """
+    """Also tests AutoURI auto-conversion since it's based on is_valid property"""
     expected = path.startswith("s3://")
     assert S3URI(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == S3URI
@@ -126,8 +125,8 @@ def test_s3uri_md5_file_uri(s3_v6_txt):
 
 def test_s3uri_cp_url(s3_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
-        url_test_path: s3 -> url
-            This will fail as intended since URL is read-only.
+    url_test_path: s3 -> url
+        This will fail as intended since URL is read-only.
     """
     u = S3URI(s3_v6_txt)
     basename = os.path.basename(s3_v6_txt)

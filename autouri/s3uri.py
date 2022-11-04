@@ -36,8 +36,7 @@ class S3URILock(BaseFileLock):
         self._lock_read_delay = self._poll_interval / 10.0
 
     def acquire(self, timeout=None, poll_intervall=5.0):
-        """To use self._poll_interval instead of poll_intervall in args.
-        """
+        """To use self._poll_interval instead of poll_intervall in args."""
         super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
 
     def _acquire(self):
@@ -188,8 +187,8 @@ class S3URI(URIBase):
 
     def _cp(self, dest_uri):
         """Copy from S3URI to
-            S3URI
-            AbsPath
+        S3URI
+        AbsPath
         """
         from .abspath import AbsPath
 
@@ -220,8 +219,8 @@ class S3URI(URIBase):
 
     def _cp_from(self, src_uri):
         """Copy to S3URI from
-            AbsPath
-            HTTPURL
+        AbsPath
+        HTTPURL
         """
         from .abspath import AbsPath
         from .httpurl import HTTPURL
@@ -251,8 +250,7 @@ class S3URI(URIBase):
         return False
 
     def get_bucket_path(self) -> Tuple[str, str]:
-        """Returns a tuple of URI's S3 bucket and path.
-        """
+        """Returns a tuple of URI's S3 bucket and path."""
         arr = self.uri_wo_scheme.split(S3URI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)

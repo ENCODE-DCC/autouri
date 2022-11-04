@@ -31,8 +31,7 @@ def test_httpurl_uri_wo_scheme(path) -> str:
 
 @pytest.mark.parametrize("path", common_paths())
 def test_httpurl_is_valid(path) -> bool:
-    """Also tests AutoURI auto-conversion since it's based on is_valid property
-    """
+    """Also tests AutoURI auto-conversion since it's based on is_valid property"""
     expected = path.startswith(("https://", "http://"))
     assert HTTPURL(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == HTTPURL
@@ -137,8 +136,8 @@ def test_httpurl_md5_file_uri(url_v6_txt):
 
 def test_httpurl_cp_url(url_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
-        url_test_path: url -> url
-            This will fail as intended since URL is read-only.
+    url_test_path: url -> url
+        This will fail as intended since URL is read-only.
     """
     u = HTTPURL(url_v6_txt)
     basename = os.path.basename(url_v6_txt)
@@ -292,16 +291,14 @@ def test_httpurl_get_loc_suffix() -> str:
 
 
 def test_httpurl_get_loc_prefix() -> str:
-    """HTTPURL is read-only storage and hence loc_prefix == ''
-    """
+    """HTTPURL is read-only storage and hence loc_prefix == ''"""
     assert HTTPURL.get_loc_prefix() == ""
 
 
 def test_httpurl_localize(
     url_test_path, gcs_j1_json, gcs_v41_json, gcs_v421_tsv, gcs_v5_csv, gcs_v6_txt
 ) -> Tuple[str, bool]:
-    """Localize should fail.
-    """
+    """Localize should fail."""
     loc_prefix = os.path.join(url_test_path, "test_httpurl_localize")
 
     for j1_json in (gcs_j1_json,):
