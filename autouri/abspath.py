@@ -67,7 +67,6 @@ class AbsPath(URIBase):
 
         self._uri = convert_relpath_to_abspath_if_valid(self._uri)
 
-
     @property
     def is_valid(self):
         return os.path.isabs(self._uri)
