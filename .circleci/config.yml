@@ -85,7 +85,7 @@ jobs:
       - run: *install_aws_lib
       - run: *make_root_only_dir
       - run:
-          no_output_timeout: 60m
+          no_output_timeout: 90m
           command: |
             cd tests/
             echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
