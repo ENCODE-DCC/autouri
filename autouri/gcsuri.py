@@ -83,9 +83,9 @@ class GCSURILock(BaseFileLock):
             (based on GCS's temporary hold) and then deleted.
     """
 
-    DEFAULT_RETRY_RELEASE = 3
-    DEFAULT_RETRY_RELEASE_INTERVAL = 3
-    DEFAULT_LOCK_FILE_EXPIRATION_SEC = 3600
+    DEFAULT_RETRY_RELEASE = 5
+    DEFAULT_RETRY_RELEASE_INTERVAL = 10
+    DEFAULT_LOCK_FILE_EXPIRATION_SEC = 1800
 
     def __init__(
         self,
@@ -243,8 +243,8 @@ class GCSURI(URIBase):
     PRIVATE_KEY_FILE: str = ""
     DURATION_PRESIGNED_URL: int = 4233600
 
-    RETRY_BUCKET: int = 3
-    RETRY_BUCKET_DELAY: int = 3
+    RETRY_BUCKET: int = 5
+    RETRY_BUCKET_DELAY: int = 10
     USE_GSUTIL_FOR_S3: bool = False
 
     _CACHED_GCS_CLIENTS = {}
