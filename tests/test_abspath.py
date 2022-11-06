@@ -4,7 +4,7 @@ from typing import Any, Tuple
 
 import pytest
 
-from autouri.abspath import AbsPath
+from autouri.abspath import AbsPath, convert_relpath_to_abspath_if_valid
 from autouri.autouri import AutoURI, URIBase
 from autouri.httpurl import ReadOnlyStorageError
 
@@ -14,6 +14,25 @@ from .files import (
     recurse_raise_if_uri_not_exist,
     v6_txt_contents,
 )
+
+
+@pytest.mark.parametrize(
+    "path,converted",
+    [
+        ("/asdfasf/sdaf/", "/asdfasf/sdaf/"),
+        ("LICENSE", "LICENSE"),
+        ("setup.py", "setup.py"),
+        ("setup.py.", "setup.py."),
+        ("license", "license"),
+        ("does-not-exist.json", "does-not-exist.json"),
+        ("~/sadfsf", "~/sadfsf"),
+        ("/etc/passwd", "/etc/passwd"),
+        ("conftest.py", os.getcwd() + "/conftest.py"),
+        ("files.py", os.getcwd() + "/files.py"),
+    ],
+)
+def test_convert_relpath_to_abspath_if_valid(path, converted) -> Any:
+    assert convert_relpath_to_abspath_if_valid(path, allowed_exts=(".py")) == converted
 
 
 @pytest.mark.parametrize("path", common_paths())
@@ -33,8 +52,7 @@ def test_abspath_uri_wo_scheme(path) -> str:
 
 @pytest.mark.parametrize("path", common_paths())
 def test_abspath_is_valid(path) -> bool:
-    """Also tests AutoURI auto-conversion since it's based on is_valid property
-    """
+    """Also tests AutoURI auto-conversion since it's based on is_valid property"""
     expected = os.path.isabs(os.path.expanduser(path))
     assert AbsPath(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == AbsPath
@@ -122,8 +140,8 @@ def test_abspath_md5_file_uri(local_v6_txt):
 
 def test_abspath_cp_url(local_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
-        url_test_path: local -> url
-            This will fail as intended since URL is read-only.
+    url_test_path: local -> url
+        This will fail as intended since URL is read-only.
     """
     u = AbsPath(local_v6_txt)
     basename = os.path.basename(local_v6_txt)

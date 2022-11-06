@@ -53,8 +53,7 @@ def j1_json_contents(
 
 
 def v41_json_contents():
-    """JSON without any files defined in it.
-    """
+    """JSON without any files defined in it."""
     return '{ "k1": "v1" }'
 
 

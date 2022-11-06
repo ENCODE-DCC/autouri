@@ -3,7 +3,6 @@
         Check it with "gsutil versioning get gs://BUCKET-NAME"
         https://cloud.google.com/storage/docs/object-versioning
 """
-import json
 import logging
 import os
 import time
@@ -14,13 +13,11 @@ from typing import Optional, Tuple
 
 import requests
 from filelock import BaseFileLock
-from filelock import Timeout as FileLockTimeout
 from google.api_core.exceptions import (
+    ClientError,
     Forbidden,
-    GatewayTimeout,
     NotFound,
     PermissionDenied,
-    ServiceUnavailable,
 )
 from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
@@ -29,7 +26,6 @@ from google.oauth2.service_account import Credentials
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
-from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -68,138 +64,41 @@ def add_google_app_creds_to_env(service_account_key_file):
 
 
 class GCSURILock(BaseFileLock):
-    """Slow but stable locking with using GCS temporary_hold
-    Hold the lock file instead of the target file that lock file protects.
-
-    Class constants:
-        DEFAULT_RETRY_RELEASE:
-            Retry if release (deletion) of a lock file fails.
-        DEFAULT_RETRY_RELEASE_INTERVAL:
-            Interval for retrial in seconds.
-        DEFAULT_LOCK_FILE_EXPIRATION_SEC:
-            Expiration time of a lock file in seconds.
-            If a lock file is older than this then it is released from hold
-            (based on GCS's temporary hold) and then deleted.
-    """
-
-    DEFAULT_RETRY_RELEASE = 3
-    DEFAULT_RETRY_RELEASE_INTERVAL = 3
-    DEFAULT_LOCK_FILE_EXPIRATION_SEC = 3600
-
-    def __init__(
-        self,
-        lock_file,
-        thread_id=-1,
-        timeout=900,
-        poll_interval=10.0,
-        retry_release=DEFAULT_RETRY_RELEASE,
-        retry_release_interval=DEFAULT_RETRY_RELEASE_INTERVAL,
-        lockfile_expiration_sec=DEFAULT_LOCK_FILE_EXPIRATION_SEC,
-        no_lock=False,
-    ):
+    def __init__(self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
-        self._thread_id = thread_id
-        self._retry_release = retry_release
-        self._retry_release_interval = retry_release_interval
-        self._lockfile_expiration_sec = lockfile_expiration_sec
+        self._lock_read_delay = self._poll_interval / 10.0
 
-    def acquire(self, timeout=None, poll_intervall=5.0):
-        """Use self._poll_interval instead of poll_intervall in args
-        """
-        try:
-            super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
-        except FileLockTimeout:
-            logger.error(
-                "Filelock timed out. Is there any other process holding the file? "
-                "Or this can happen when autouri was forcefully killed while holding a file. "
-                "e.g. pressing Ctrl+C two many times or killed by the system with SIGKILL. "
-                "If there is no other process holding the file "
-                "then please manually release/delete the lock file with gsutil. "
-                "Use the following command lines to delete the lock file.\n\n"
-                "gsutil retention temp release {lock_file}\n"
-                "gsutil rm {lock_file}\n".format(lock_file=self._lock_file)
-            )
-            raise
+    def acquire(self, timeout=None, poll_interval=5.0):
+        """To use self._poll_interval instead of poll_interval in args."""
+        super().acquire(timeout=timeout, poll_interval=self._poll_interval)
 
     def _acquire(self):
-        """Try to acquire a lock.
-        Once successfully acquired, lock the .lock file temporarily by setting
-        blob.temporary_hold as True (similary to `gsutil retention temp set URI`).
-        This will be released in self._release().
-
-        Parse Forbidden error to check if it's raised from temporary hold.
-        It can also be raised from lack of write permission, which should be re-raised.
+        """Unlike GCSURI, this module does not use S3 Object locking.
+        This will write id(self) on a .lock file.
         """
-        u = GCSURI(self._lock_file, thread_id=self._thread_id)
+        u = GCSURI(self._lock_file)
+        str_id = str(id(self))
         try:
-            metadata = u.get_metadata()
-
-            if metadata.exists:
-                # if lock file already exists then check if it's expired
-                if (
-                    now_utc().timestamp()
-                    > metadata.mtime + self._lockfile_expiration_sec
-                ):
-                    logger.debug("Found expired lock file, will release/delete it.")
-                    blob, _ = u.get_blob()
-                    if blob.temporary_hold:
-                        blob.temporary_hold = False
-                        blob.patch()
-                    blob.delete()
-                else:
-                    return
-            blob, _ = u.get_blob(new=True)
-            blob.upload_from_string("")
-            blob.temporary_hold = True
-            blob.patch()
-            self._lock_file_fd = id(self)
-
-        except Forbidden as e:
-            err_msg = json.loads(e._response._content)["error"]["message"]
-            if GCS_TEMPORARY_HOLD_ERROR_MSG not in err_msg:
-                raise
-            logger.debug(
-                "Failed to acquire a file lock. "
-                "It's already locked by another process. "
-                "You need to wait until it's released. "
-                "Retrying until timeout. "
-            )
-
-        except (GatewayTimeout, NotFound, ServiceUnavailable) as e:
-            logger.debug(
-                "Failed to acquire a file lock. "
-                "Server is unavailable or busy? "
-                "Or too many requests? "
-                "Retrying until timeout. "
-                "{err}".format(err=str(e))
-            )
+            if not u.exists:
+                u.write(str_id, no_lock=True)
+                time.sleep(self._lock_read_delay)
+            if u.read() == str_id:
+                self._lock_file_fd = id(self)
+        except (Forbidden, NotFound):
+            raise
+        except ClientError:
+            pass
+        return None
 
     def _release(self):
-        u = GCSURI(self._lock_file, thread_id=self._thread_id)
-        for retry in range(self._retry_release):
-            try:
-                blob, _ = u.get_blob()
-                blob.temporary_hold = False
-                blob.patch()
-                blob.delete()
-                self._lock_file_fd = None
-                break
-            except Exception as e:
-                error_msg = "{err}. Failed to delete a lock file: file={file}. "
-                if retry == self._retry_release - 1:
-                    error_msg += (
-                        "You may need to manually delete a lock file. "
-                        'Use "gsutil retention temp release {file}" to unlock it first. '
-                        'Then use "gsutil rm -f {file}" to delete it. '
-                        "Deleting a lock file itself does not affect "
-                        "the file protected by it."
-                    )
-                error_msg = error_msg.format(err=e, file=self._lock_file)
-
-                logger.error(error_msg)
-
-            time.sleep(self._retry_release_interval)
+        u = GCSURI(self._lock_file)
+        try:
+            u.rm(no_lock=True, silent=True)
+            self._lock_file_fd = None
+        except ClientError:
+            pass
+        return None
 
 
 class GCSURI(URIBase):
@@ -236,8 +135,8 @@ class GCSURI(URIBase):
     PRIVATE_KEY_FILE: str = ""
     DURATION_PRESIGNED_URL: int = 4233600
 
-    RETRY_BUCKET: int = 3
-    RETRY_BUCKET_DELAY: int = 3
+    RETRY_BUCKET: int = 5
+    RETRY_BUCKET_DELAY: int = 10
     USE_GSUTIL_FOR_S3: bool = False
 
     _CACHED_GCS_CLIENTS = {}
@@ -258,7 +157,6 @@ class GCSURI(URIBase):
             poll_interval = GCSURI.LOCK_POLL_INTERVAL
         return GCSURILock(
             self._uri + GCSURI.LOCK_FILE_EXT,
-            thread_id=self._thread_id,
             timeout=timeout,
             poll_interval=poll_interval,
         )
@@ -330,9 +228,9 @@ class GCSURI(URIBase):
 
     def _cp(self, dest_uri):
         """Copy from GCSURI to
-            GCSURI
-            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
-            AbsPath
+        GCSURI
+        S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
+        AbsPath
         """
         from .s3uri import S3URI
         from .abspath import AbsPath
@@ -375,9 +273,9 @@ class GCSURI(URIBase):
 
     def _cp_from(self, src_uri):
         """Copy to GCSURI from
-            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
-            AbsPath
-            HTTPURL
+        S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
+        AbsPath
+        HTTPURL
         """
         from .s3uri import S3URI
         from .abspath import AbsPath
@@ -473,8 +371,7 @@ class GCSURI(URIBase):
         return blob, bucket_obj
 
     def get_bucket_path(self) -> Tuple[str, str]:
-        """Returns a tuple of URI's S3 bucket and path.
-        """
+        """Returns a tuple of URI's S3 bucket and path."""
         arr = self.uri_wo_scheme.split(GCSURI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
@@ -551,8 +448,7 @@ class GCSURI(URIBase):
 
     @staticmethod
     def get_gcs_anonymous_client(thread_id) -> storage.Client:
-        """Get GCS anonymous client per thread_id.
-        """
+        """Get GCS anonymous client per thread_id."""
         cl = GCSURI._CACHED_GCS_ANONYMOUS_CLIENTS.get(thread_id)
 
         if cl is None:

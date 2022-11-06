@@ -39,6 +39,7 @@ install_py3_packages: &install_py3_packages
     python3 -m pip install --upgrade pip
     pip3 install PyYAML --ignore-installed
     pip3 install pre-commit pytest requests dateparser filelock six ntplib
+    pip3 install filelock --upgrade
 
 
 install_gcs_lib: &install_gcs_lib
@@ -84,7 +85,7 @@ jobs:
       - run: *install_aws_lib
       - run: *make_root_only_dir
       - run:
-          no_output_timeout: 60m
+          no_output_timeout: 90m
           command: |
             cd tests/
             echo ${GCLOUD_SERVICE_ACCOUNT_SECRET_JSON} > tmp_key.json
@@ -99,7 +100,8 @@ jobs:
                    --gcp-private-key-file tmp_key.json \
                    --s3-root ${S3_ROOT} \
                    --gcs-root ${GCS_ROOT} \
-                   --gcs-root-url ${GCS_ROOT_URL}
+                   --gcs-root-url ${GCS_ROOT_URL} \
+                   -vv -s
 
             # to use gsutil
             export BOTO_CONFIG=/dev/null

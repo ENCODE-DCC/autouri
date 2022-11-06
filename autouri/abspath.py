@@ -1,3 +1,9 @@
+"""Important update to allow relative path for some file extensions:
+As AbsPath's name implies, it was originally designed to have an absolute path only.
+but will allow relative path of a file if it exists on CWD and has an allowed extension
+(,json, .csv, .tsv). Such relative path will be automatically converted to absolute path.
+"""
+
 import errno
 import glob
 import hashlib
@@ -13,6 +19,26 @@ from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata
 
 logger = logging.getLogger(__name__)
+
+EXTS_ALLOWED_FOR_RELPATH_TO_ABSPATH_CONVERSION = (".json", ".csv", ".tsv")
+
+
+def convert_relpath_to_abspath_if_valid(
+    rel_path,
+    base_dir=os.getcwd(),
+    allowed_exts=EXTS_ALLOWED_FOR_RELPATH_TO_ABSPATH_CONVERSION,
+):
+    """Valid means it is an existing file with an extensions in allowed_exts."""
+    if os.path.isabs(rel_path):
+        return rel_path
+    abs_path = os.path.join(base_dir, rel_path)
+    if (
+        os.path.exists(abs_path)
+        and os.path.isfile(abs_path)
+        and abs_path.endswith(allowed_exts)
+    ):
+        return abs_path
+    return rel_path
 
 
 class AbsPath(URIBase):
@@ -36,7 +62,10 @@ class AbsPath(URIBase):
     def __init__(self, uri, thread_id=-1):
         if isinstance(uri, str):
             uri = os.path.expanduser(uri)
+
         super().__init__(uri, thread_id=thread_id)
+
+        self._uri = convert_relpath_to_abspath_if_valid(self._uri)
 
     @property
     def is_valid(self):
@@ -73,8 +102,7 @@ class AbsPath(URIBase):
         return SoftFileLock(u_lock._uri, timeout=timeout)
 
     def get_metadata(self, skip_md5=False, make_md5_file=False):
-        """If md5 file doesn't exist then use hashlib.md5() to calculate md5 hash
-        """
+        """If md5 file doesn't exist then use hashlib.md5() to calculate md5 hash"""
         exists = os.path.exists(self._uri)
         mt, sz, md5 = None, None, None
         if exists:
@@ -119,8 +147,7 @@ class AbsPath(URIBase):
         return os.remove(self._uri)
 
     def _cp(self, dest_uri):
-        """Copy from AbsPath to other classes
-        """
+        """Copy from AbsPath to other classes"""
         dest_uri = AutoURI(dest_uri)
 
         if isinstance(dest_uri, AbsPath):
@@ -159,8 +186,7 @@ class AbsPath(URIBase):
         return None
 
     def mkdir_dirname(self):
-        """Create a directory but raise if no write permission on it
-        """
+        """Create a directory but raise if no write permission on it"""
         os.makedirs(self.dirname, exist_ok=True)
         if not os.access(self.dirname, os.W_OK):
             raise PermissionError(
@@ -194,8 +220,7 @@ class AbsPath(URIBase):
                 raise e
 
     def __calc_md5sum(self):
-        """Expensive md5 calculation
-        """
+        """Expensive md5 calculation"""
         logger.debug(
             "calculating md5sum hash of local file: {file}".format(file=self._uri)
         )

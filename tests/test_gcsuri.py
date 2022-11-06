@@ -33,8 +33,7 @@ def test_gcsuri_uri_wo_scheme(path) -> str:
 
 @pytest.mark.parametrize("path", common_paths())
 def test_gcsuri_is_valid(path) -> bool:
-    """Also tests AutoURI auto-conversion since it's based on is_valid property
-    """
+    """Also tests AutoURI auto-conversion since it's based on is_valid property"""
     expected = path.startswith("gs://")
     assert GCSURI(path).is_valid == expected
     assert not expected or type(AutoURI(path)) == GCSURI
@@ -126,8 +125,8 @@ def test_gcsuri_md5_file_uri(gcs_v6_txt):
 
 def test_gcsuri_cp_url(gcs_v6_txt, url_test_path) -> "AutoURI":
     """Test copying local_v6_txt to the following destination storages:
-        url_test_path: gcs -> url
-            This will fail as intended since URL is read-only.
+    url_test_path: gcs -> url
+        This will fail as intended since URL is read-only.
     """
     u = GCSURI(gcs_v6_txt)
     basename = os.path.basename(gcs_v6_txt)
