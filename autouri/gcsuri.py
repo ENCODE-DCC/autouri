@@ -157,7 +157,6 @@ class GCSURI(URIBase):
             poll_interval = GCSURI.LOCK_POLL_INTERVAL
         return GCSURILock(
             self._uri + GCSURI.LOCK_FILE_EXT,
-            thread_id=self._thread_id,
             timeout=timeout,
             poll_interval=poll_interval,
         )
