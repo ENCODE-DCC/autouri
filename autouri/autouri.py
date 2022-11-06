@@ -123,8 +123,7 @@ class URIBase(ABC):
 
     @property
     def uri(self) -> Any:
-        """Can store any type of variable.
-        """
+        """Can store any type of variable."""
         return self._uri
 
     @property
@@ -147,14 +146,12 @@ class URIBase(ABC):
 
     @property
     def dirname(self) -> str:
-        """Dirname with a scheme (gs://, s3://, http://, /, ...).
-        """
+        """Dirname with a scheme (gs://, s3://, http://, /, ...)."""
         return os.path.dirname(str(self._uri))
 
     @property
     def dirname_wo_scheme(self) -> str:
-        """Dirname without a scheme (gs://, s3://, http://, /, ...).
-        """
+        """Dirname without a scheme (gs://, s3://, http://, /, ...)."""
         return os.path.dirname(self.uri_wo_scheme)
 
     @property
@@ -169,20 +166,17 @@ class URIBase(ABC):
 
     @property
     def basename(self) -> str:
-        """Basename.
-        """
+        """Basename."""
         return os.path.basename(str(self._uri))
 
     @property
     def basename_wo_ext(self) -> str:
-        """Basename without extension.
-        """
+        """Basename without extension."""
         return os.path.splitext(self.basename)[0]
 
     @property
     def ext(self) -> str:
-        """File extension.
-        """
+        """File extension."""
         return os.path.splitext(self.basename)[1]
 
     @property
@@ -191,20 +185,17 @@ class URIBase(ABC):
 
     @property
     def mtime(self) -> float:
-        """Seconds since the epoch.
-        """
+        """Seconds since the epoch."""
         return self.get_metadata(skip_md5=True).mtime
 
     @property
     def size(self) -> int:
-        """Size in bytes.
-        """
+        """Size in bytes."""
         return self.get_metadata(skip_md5=True).size
 
     @property
     def md5(self) -> str:
-        """Md5 hash hexadecimal digest string.
-        """
+        """Md5 hash hexadecimal digest string."""
         return self.get_metadata().md5
 
     @property
@@ -239,8 +230,7 @@ class URIBase(ABC):
 
     @property
     def md5_file_uri(self) -> "AutoURI":
-        """Get md5 file URI. Not guaranteed to exist
-        """
+        """Get md5 file URI. Not guaranteed to exist"""
         return AutoURI(str(self._uri) + AutoURI.MD5_FILE_EXT)
 
     def cp(
@@ -353,15 +343,13 @@ class URIBase(ABC):
         return (d._uri, 0) if return_flag else d._uri
 
     def write(self, s, no_lock=False):
-        """Write string/bytes to file. It is protected by a locking mechanism.
-        """
+        """Write string/bytes to file. It is protected by a locking mechanism."""
         with self.get_lock(no_lock=no_lock):
             self._write(s)
         return
 
     def rm(self, no_lock=False, silent=False):
-        """Remove a URI from its storage. It is protected by by a locking mechanism.
-        """
+        """Remove a URI from its storage. It is protected by by a locking mechanism."""
         with self.get_lock(no_lock=no_lock):
             self._rm()
             if not silent:
@@ -455,8 +443,7 @@ class URIBase(ABC):
 
     @abstractmethod
     def read(self, byte=False) -> Union[str, bytes]:
-        """Reads string/byte from a URI.
-        """
+        """Reads string/byte from a URI."""
         raise NotImplementedError
 
     @abstractmethod
@@ -504,8 +491,7 @@ class URIBase(ABC):
 
     @classmethod
     def get_path_sep(cls) -> str:
-        """Separator for directory.
-        """
+        """Separator for directory."""
         return cls._PATH_SEP
 
     @classmethod

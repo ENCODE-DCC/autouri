@@ -21,6 +21,7 @@ from google.api_core.exceptions import (
     NotFound,
     PermissionDenied,
     ServiceUnavailable,
+    TooManyRequests,
 )
 from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
@@ -104,11 +105,10 @@ class GCSURILock(BaseFileLock):
         self._retry_release_interval = retry_release_interval
         self._lockfile_expiration_sec = lockfile_expiration_sec
 
-    def acquire(self, timeout=None, poll_intervall=5.0):
-        """Use self._poll_interval instead of poll_intervall in args
-        """
+    def acquire(self, timeout=None, poll_interval=5.0):
+        """Use self._poll_interval instead of poll_interval in args"""
         try:
-            super().acquire(timeout=timeout, poll_intervall=self._poll_interval)
+            super().acquire(timeout=timeout, poll_interval=self._poll_interval)
         except FileLockTimeout:
             logger.error(
                 "Filelock timed out. Is there any other process holding the file? "
@@ -170,10 +170,17 @@ class GCSURILock(BaseFileLock):
             logger.debug(
                 "Failed to acquire a file lock. "
                 "Server is unavailable or busy? "
-                "Or too many requests? "
                 "Retrying until timeout. "
                 "{err}".format(err=str(e))
             )
+        except TooManyRequests as e:
+            logger.debug(
+                "Failed to acquire a file lock. "
+                "Too many requests. Will wait for a while."
+                "And then retrying until timeout. "
+                "{err}".format(err=str(e))
+            )
+            time.sleep(self._retry_release_interval)
 
     def _release(self):
         u = GCSURI(self._lock_file, thread_id=self._thread_id)
@@ -330,9 +337,9 @@ class GCSURI(URIBase):
 
     def _cp(self, dest_uri):
         """Copy from GCSURI to
-            GCSURI
-            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
-            AbsPath
+        GCSURI
+        S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
+        AbsPath
         """
         from .s3uri import S3URI
         from .abspath import AbsPath
@@ -375,9 +382,9 @@ class GCSURI(URIBase):
 
     def _cp_from(self, src_uri):
         """Copy to GCSURI from
-            S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
-            AbsPath
-            HTTPURL
+        S3URI: can use gsutil for direct transfer if USE_GSUTIL_FOR_S3 == True
+        AbsPath
+        HTTPURL
         """
         from .s3uri import S3URI
         from .abspath import AbsPath
@@ -473,8 +480,7 @@ class GCSURI(URIBase):
         return blob, bucket_obj
 
     def get_bucket_path(self) -> Tuple[str, str]:
-        """Returns a tuple of URI's S3 bucket and path.
-        """
+        """Returns a tuple of URI's S3 bucket and path."""
         arr = self.uri_wo_scheme.split(GCSURI.get_path_sep(), maxsplit=1)
         if len(arr) == 1:
             # root directory without path (key)
@@ -551,8 +557,7 @@ class GCSURI(URIBase):
 
     @staticmethod
     def get_gcs_anonymous_client(thread_id) -> storage.Client:
-        """Get GCS anonymous client per thread_id.
-        """
+        """Get GCS anonymous client per thread_id."""
         cl = GCSURI._CACHED_GCS_ANONYMOUS_CLIENTS.get(thread_id)
 
         if cl is None:

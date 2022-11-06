@@ -35,8 +35,7 @@ def base64_to_hex(b: str) -> str:
 
 
 def parse_md5_str(raw: str) -> str:
-    """Check if it's based on base64 then convert it to hexadecimal string.
-    """
+    """Check if it's based on base64 then convert it to hexadecimal string."""
     raw = raw.strip("\"'")
     if len(raw) == 32:
         return raw
