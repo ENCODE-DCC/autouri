@@ -65,7 +65,7 @@ class S3URILock(BaseFileLock):
 
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
-            if status in (403, 404):
+            if status in (403,):
                 raise
         return None
 

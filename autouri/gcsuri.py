@@ -99,9 +99,9 @@ class GCSURILock(BaseFileLock):
             elif u.read() == str_id:
                 self._lock_file_fd = id(self)
 
-        except (Forbidden, NotFound):
+        except Forbidden:
             raise
-        except (ClientError, ValueError):
+        except (NotFound, ClientError, ValueError):
             pass
         return None
 
@@ -110,7 +110,7 @@ class GCSURILock(BaseFileLock):
         try:
             u.rm(no_lock=True, silent=True)
             self._lock_file_fd = None
-        except ClientError:
+        except (ClientError, ValueError):
             pass
         return None
 
