@@ -103,6 +103,9 @@ class GCSURILock(BaseFileLock):
             raise
         except (NotFound, ClientError, ValueError):
             pass
+        except TypeError:
+            # this happens if file exists and failed to get metadata, so u.mtime is None
+            pass
         return None
 
     def _release(self):
@@ -208,7 +211,7 @@ class GCSURI(URIBase):
 
     def read(self, byte=False):
         blob, _ = self.get_blob()
-        b = blob.download_as_string()
+        b = blob.download_as_bytes()
         if byte:
             return b
         return b.decode()
