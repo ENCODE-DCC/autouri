@@ -100,7 +100,7 @@ class GCSURILock(BaseFileLock):
                 self._lock_file_fd = id(self)
         except (Forbidden, NotFound):
             raise
-        except ClientError:
+        except (ClientError, ValueError):
             pass
         return None
 
