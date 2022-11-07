@@ -61,17 +61,17 @@ def run_write_v6_txt(prefix, nth):
 
 def test_race_cond_autouri_write_local(local_test_path):
     prefix = os.path.join(local_test_path, "test_race_cond_autouri_write_local")
-    nth = 10
+    nth = 20
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_gcs(gcs_test_path):
     prefix = os.path.join(gcs_test_path, "test_race_cond_autouri_write_gcs")
-    nth = 5
+    nth = 8
     run_write_v6_txt(prefix, nth)
 
 
 def test_race_cond_autouri_write_s3(s3_test_path):
-    nth = 3
+    nth = 5
     prefix = os.path.join(s3_test_path, "test_race_cond_autouri_write_s3")
     run_write_v6_txt(prefix, nth)
