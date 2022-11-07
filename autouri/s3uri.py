@@ -67,6 +67,9 @@ class S3URILock(BaseFileLock):
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
             if status in (403,):
                 raise
+        except TypeError:
+            # this happens if file exists and failed to get metadata, so u.mtime is None
+            pass
         return None
 
     def _release(self):
