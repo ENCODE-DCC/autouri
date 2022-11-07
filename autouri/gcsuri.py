@@ -26,6 +26,7 @@ from google.oauth2.service_account import Credentials
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,14 @@ def add_google_app_creds_to_env(service_account_key_file):
 
 
 class GCSURILock(BaseFileLock):
+    """Class constants:
+    - LOCK_FILE_EXPIRATION_SEC:
+        Expiration of a lock file based on its modtime in seconds
+        If expired then such lock file is ignored.
+    """
+
+    LOCK_FILE_EXPIRATION_SEC = 1800
+
     def __init__(self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
         self._poll_interval = poll_interval
@@ -80,14 +89,19 @@ class GCSURILock(BaseFileLock):
         u = GCSURI(self._lock_file)
         str_id = str(id(self))
         try:
-            if not u.exists:
+            if (
+                not u.exists
+                or now_utc().timestamp() > u.mtime + GCSURILock.LOCK_FILE_EXPIRATION_SEC
+            ):
                 u.write(str_id, no_lock=True)
-                time.sleep(self._lock_read_delay)
-            if u.read() == str_id:
                 self._lock_file_fd = id(self)
+
+            elif u.read() == str_id:
+                self._lock_file_fd = id(self)
+
         except (Forbidden, NotFound):
             raise
-        except ClientError:
+        except (ClientError, ValueError):
             pass
         return None
 

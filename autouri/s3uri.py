@@ -2,7 +2,6 @@
     S3 Object versioning must be turned off
 """
 import logging
-import time
 from tempfile import NamedTemporaryFile
 from typing import Optional, Tuple
 
@@ -13,6 +12,7 @@ from filelock import BaseFileLock
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,14 @@ class S3URILock(BaseFileLock):
     This module first checks if .lock does not exist, then tries to write .lock with id(self).
     It waits for a short time (self._lock_read_delay) and checks if written .lock has the same id(self).
     self._lock_read_delay is set as poll_interval/10.
+
+    Class constants:
+    - LOCK_FILE_EXPIRATION_SEC:
+        Expiration of a lock file based on its modtime in seconds
+        If expired then such lock file is ignored.
     """
+
+    LOCK_FILE_EXPIRATION_SEC = 1800
 
     def __init__(self, lock_file, timeout=900, poll_interval=10.0, no_lock=False):
         super().__init__(lock_file, timeout=timeout)
@@ -46,11 +53,16 @@ class S3URILock(BaseFileLock):
         u = S3URI(self._lock_file)
         str_id = str(id(self))
         try:
-            if not u.exists:
+            if (
+                not u.exists
+                or now_utc().timestamp() > u.mtime + S3URILock.LOCK_FILE_EXPIRATION_SEC
+            ):
                 u.write(str_id, no_lock=True)
-                time.sleep(self._lock_read_delay)
-            if u.read() == str_id:
                 self._lock_file_fd = id(self)
+
+            elif u.read() == str_id:
+                self._lock_file_fd = id(self)
+
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
             if status in (403, 404):
