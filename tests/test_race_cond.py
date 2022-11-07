@@ -72,6 +72,6 @@ def test_race_cond_autouri_write_gcs(gcs_test_path):
 
 
 def test_race_cond_autouri_write_s3(s3_test_path):
-    nth = 5
+    nth = 3
     prefix = os.path.join(s3_test_path, "test_race_cond_autouri_write_s3")
     run_write_v6_txt(prefix, nth)
