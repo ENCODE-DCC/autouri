@@ -23,10 +23,10 @@ from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import storage
 from google.cloud.storage import Blob
 from google.oauth2.service_account import Credentials
-from ntp_now import now_utc
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 

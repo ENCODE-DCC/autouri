@@ -10,10 +10,10 @@ import requests
 from boto3 import client
 from botocore.exceptions import ClientError
 from filelock import BaseFileLock
-from ntp_now import now_utc
 
 from .autouri import AutoURI, URIBase
 from .metadata import URIMetadata, get_seconds_from_epoch, parse_md5_str
+from .ntp_now import now_utc
 
 logger = logging.getLogger(__name__)
 
