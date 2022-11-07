@@ -94,10 +94,11 @@ class GCSURILock(BaseFileLock):
                 or now_utc().timestamp() > u.mtime + GCSURILock.LOCK_FILE_EXPIRATION_SEC
             ):
                 u.write(str_id, no_lock=True)
-                time.sleep(self._lock_read_delay)
-
-            if u.read() == str_id:
                 self._lock_file_fd = id(self)
+
+            elif u.read() == str_id:
+                self._lock_file_fd = id(self)
+
         except (Forbidden, NotFound):
             raise
         except (ClientError, ValueError):

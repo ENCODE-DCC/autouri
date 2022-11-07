@@ -2,7 +2,6 @@
     S3 Object versioning must be turned off
 """
 import logging
-import time
 from tempfile import NamedTemporaryFile
 from typing import Optional, Tuple
 
@@ -59,10 +58,11 @@ class S3URILock(BaseFileLock):
                 or now_utc().timestamp() > u.mtime + S3URILock.LOCK_FILE_EXPIRATION_SEC
             ):
                 u.write(str_id, no_lock=True)
-                time.sleep(self._lock_read_delay)
-
-            if u.read() == str_id:
                 self._lock_file_fd = id(self)
+
+            elif u.read() == str_id:
+                self._lock_file_fd = id(self)
+
         except ClientError as e:
             status = e.response["ResponseMetadata"]["HTTPStatusCode"]
             if status in (403, 404):
