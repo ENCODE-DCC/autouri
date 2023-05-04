@@ -86,7 +86,7 @@ class GCSURILock(BaseFileLock):
         """Unlike GCSURI, this module does not use S3 Object locking.
         This will write id(self) on a .lock file.
         """
-        u = GCSURI(self._lock_file)
+        u = GCSURI(self.lock_file)
         str_id = str(id(self))
         try:
             if (
@@ -94,10 +94,10 @@ class GCSURILock(BaseFileLock):
                 or now_utc().timestamp() > u.mtime + GCSURILock.LOCK_FILE_EXPIRATION_SEC
             ):
                 u.write(str_id, no_lock=True)
-                self._lock_file_fd = id(self)
+                self._context.lock_file_fd = id(self)
 
             elif u.read() == str_id:
-                self._lock_file_fd = id(self)
+                self._context.lock_file_fd = id(self)
 
         except Forbidden:
             raise
@@ -109,10 +109,10 @@ class GCSURILock(BaseFileLock):
         return None
 
     def _release(self):
-        u = GCSURI(self._lock_file)
+        u = GCSURI(self.lock_file)
         try:
             u.rm(no_lock=True, silent=True)
-            self._lock_file_fd = None
+            self._context.lock_file_fd = None
         except (ClientError, ValueError):
             pass
         return None
